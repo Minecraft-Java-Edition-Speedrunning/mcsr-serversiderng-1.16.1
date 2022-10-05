@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "server-side-rng",
+  "version": "${version}",
+  "name": "ServerSideRNG",
+  "description": "",
+  "authors": [
+    "Void_X_Walker"
+  ],
+  "contact": {},
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "client": [
+      "me.voidxwalker.serversiderng.ServerSideRng"
+    ]
+  },
+  "mixins": [
+    "serverSideRNG.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.14.0",
+    "minecraft": "1.16.1"
+  }
+}
