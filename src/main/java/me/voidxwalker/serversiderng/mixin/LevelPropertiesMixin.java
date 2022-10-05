@@ -40,7 +40,7 @@ public class LevelPropertiesMixin {
         if(dynamic.get("server-side-rng-runId").result().isPresent()){
             dynamic.get("server-side-rng-runId").asNumber().result().ifPresentOrElse(result -> {
                 ServerSideRng.currentSpeedrun= new Speedrun(result.longValue());
-                ServerSideRng.LOGGER.info("Sucessfully loaded RunID from file!");
+                ServerSideRng.LOGGER.info("Successfully loaded RunID from file!");
             },() -> ServerSideRng.LOGGER.warn("Failed to load RunID from file!"));
         }
     }

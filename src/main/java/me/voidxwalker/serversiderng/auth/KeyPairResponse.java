@@ -2,7 +2,6 @@ package me.voidxwalker.serversiderng.auth;
 
 import com.google.gson.JsonObject;
 
-import java.nio.ByteBuffer;
 import java.util.Base64;
 
 public class KeyPairResponse {
