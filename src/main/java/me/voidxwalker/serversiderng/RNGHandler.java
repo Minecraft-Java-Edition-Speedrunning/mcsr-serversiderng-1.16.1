@@ -18,12 +18,9 @@ public class RNGHandler {
     }
     void initRandomMap(Random random){
         this.randomMap =new LinkedHashMap<>();
-        this.randomMap.put(RNGHandler.RNGTypes.MOB_DROP,new Random(random.nextLong()));
-        this.randomMap.put(RNGHandler.RNGTypes.BLOCK_DROP,new Random(random.nextLong()));
-        this.randomMap.put(RNGHandler.RNGTypes.BARTER,new Random(random.nextLong()));
-        this.randomMap.put(RNGHandler.RNGTypes.WORLD_SEED,new Random(random.nextLong()));
-        this.randomMap.put(RNGHandler.RNGTypes.ENDER_DRAGON_ROTATION,new Random(random.nextLong()));
-        this.randomMap.put(RNGHandler.RNGTypes.ENDER_DRAGON_LANDING_APPROACH,new Random(random.nextLong()));
+        for(RNGTypes type:RNGTypes.values()){
+            this.randomMap.put(type,new Random(random.nextLong()));
+        }
     }
     /**
      * Returns the next random {@code Long} for the specified type of {@code RNGTypes}
@@ -50,15 +47,17 @@ public class RNGHandler {
     public boolean outOfExtraTime(){
         return System.nanoTime()-startTime<this.useTime + this.extraTime;
     }
-
-
     public enum RNGTypes{
         MOB_DROP,
         BLOCK_DROP,
         BARTER,
         ENDER_DRAGON_ROTATION,
         ENDER_DRAGON_LANDING_APPROACH,
-        WORLD_SEED
+        WORLD_SEED,
+        THUNDER,
+        PROJECTILE,
+        FISHING_RESULT,
+        FISHING_TIME
     }
 }
 
