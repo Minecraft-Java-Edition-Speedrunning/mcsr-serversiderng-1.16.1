@@ -4,7 +4,6 @@ import me.voidxwalker.serversiderng.RNGHandler;
 import me.voidxwalker.serversiderng.ServerSideRng;
 import net.minecraft.server.world.ServerWorld;
 import java.util.Random;
-import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 import net.minecraft.util.profiler.Profiler;
