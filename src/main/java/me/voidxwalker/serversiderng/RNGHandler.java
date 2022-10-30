@@ -53,6 +53,7 @@ public class RNGHandler {
         BARTER,
         ENDER_DRAGON_ROTATION,
         ENDER_DRAGON_LANDING_APPROACH,
+        ENDER_DRAGON_TARGET_HEIGHT,
         WORLD_SEED,
         THUNDER,
         PROJECTILE,

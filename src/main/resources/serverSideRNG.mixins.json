@@ -4,19 +4,19 @@
   "package": "me.voidxwalker.serversiderng.mixin",
   "compatibilityLevel": "JAVA_8",
   "mixins": [
-    "LevelPropertiesMixin",
-    "MinecraftClientMixin",
-    "ClientWorldMixin",
-
     "BlockMixin",
+    "ClientWorldMixin",
     "EnderDragonFightMixin",
+    "FishingBobberEntityMixin",
     "GeneratorOptionsMixin",
     "HoldingPatternPhaseMixin",
+    "LandingApproachPhaseMixin",
+    "LevelPropertiesMixin",
     "LivingEntityMixin",
+    "MinecraftClientMixin",
     "PiglinBrainMixin",
-    "ServerWorldMixin",
     "ProjectileEntityMixin",
-    "FishingBobberEntityMixin"
+    "ServerWorldMixin"
   ],
   "client": [
   ],
