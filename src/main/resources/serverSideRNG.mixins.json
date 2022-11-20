@@ -5,18 +5,18 @@
   "compatibilityLevel": "JAVA_8",
   "mixins": [
     "BlockMixin",
-    "ClientWorldMixin",
     "EnderDragonFightMixin",
     "FishingBobberEntityMixin",
     "GeneratorOptionsMixin",
     "HoldingPatternPhaseMixin",
     "LandingApproachPhaseMixin",
-    "LevelPropertiesMixin",
     "LivingEntityMixin",
-    "MinecraftClientMixin",
     "PiglinBrainMixin",
     "ProjectileEntityMixin",
-    "ServerWorldMixin"
+    "ServerWorldMixin",
+    "MinecraftClientMixin",
+    "LevelPropertiesMixin",
+    "ClientWorldMixin"
   ],
   "client": [
   ],

@@ -33,7 +33,7 @@ public class PlayerKeyPair {
         throw new IOException("Could not retrieve profile key pair");
     }
 
-    private static PublicKeyData decodeKeyPairResponse(KeyPairResponse keyPairResponse) throws Exception {
+    static PublicKeyData decodeKeyPairResponse(KeyPairResponse keyPairResponse) throws Exception {
         if (Strings.isNullOrEmpty(keyPairResponse.publicKey) || keyPairResponse.publicKeySignature == null || keyPairResponse.publicKeySignature.length == 0) {
             throw new Exception();
         }

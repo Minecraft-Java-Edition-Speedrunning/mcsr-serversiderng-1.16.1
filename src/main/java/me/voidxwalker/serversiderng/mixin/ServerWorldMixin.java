@@ -3,9 +3,6 @@ package me.voidxwalker.serversiderng.mixin;
 import me.voidxwalker.serversiderng.RNGHandler;
 import me.voidxwalker.serversiderng.ServerSideRng;
 import net.minecraft.server.world.ServerWorld;
-import java.util.Random;
-import java.util.function.Supplier;
-
 import net.minecraft.util.profiler.Profiler;
 import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.MutableWorldProperties;
@@ -19,6 +16,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import java.util.Random;
+import java.util.function.Supplier;
 
 @Mixin(ServerWorld.class)
 public abstract class ServerWorldMixin extends World {

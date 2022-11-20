@@ -23,8 +23,7 @@ import java.util.UUID;
 public class ClientAuth {
     final static String SIGNATURE_ALGORITHM = "SHA256withRSA";
     final static String DIGEST_ALGORITHM = "SHA-256";
-    final static String PUBLIC_KEY_PREFIX = "-----BEGIN PUBLIC KEY-----\n";
-    final static String PUBLIC_KEY_SUFFIX = "\n-----END PUBLIC KEY-----";
+
     String accessToken;
     Proxy proxy;
     PlayerKeyPair pair;
@@ -40,13 +39,13 @@ public class ClientAuth {
         JsonObject output = new JsonObject();
         output.addProperty("uuid",sender.getMostSignificantBits()+"/"+sender.getLeastSignificantBits());
         output.addProperty("randomLong",""+randomLong);
-        output.addProperty("publicKey",PUBLIC_KEY_PREFIX +Base64.getEncoder().encodeToString(pair.playerPublicKey.publicKey.getEncoded()) + PUBLIC_KEY_SUFFIX);
+        output.addProperty("publicKey",Base64.getEncoder().encodeToString(pair.playerPublicKey.publicKey.getEncoded()));
         output.addProperty("instant",pair.playerPublicKey.expirationDate.toEpochMilli());
         output.addProperty("signatureBytes",Base64.getEncoder().encodeToString(pair.playerPublicKey.signatureBytes));
         output.addProperty("data",Base64.getEncoder().encodeToString(data));
         return output;
     }
-    public static URL constantURL(final String url) {
+    static URL constantURL(final String url) {
         try {
             return new URL(url);
         } catch (final MalformedURLException ex) {
@@ -54,7 +53,7 @@ public class ClientAuth {
         }
     }
 
-    private byte[] sign(UUID sender, long randomLong) {
+    byte[] sign(UUID sender, long randomLong) {
         Signature signature;
         try {
             signature = Signature.getInstance(SIGNATURE_ALGORITHM);
@@ -125,7 +124,5 @@ public class ClientAuth {
             IOUtils.closeQuietly(outputStream);
         }
         return connection;
-
     }
-
 }
