@@ -22,7 +22,7 @@ import java.util.concurrent.ExecutionException;
 
 public class ServerSideRng implements ClientModInitializer {
     public static final Logger LOGGER = LogManager.getLogger();
-    final static String BASE_URL="https://quickstart-image2-fputsekrmq-uc.a.run.app";
+    final static String BASE_URL="https://serverside-rng-website-fputsekrmq-uc.a.run.app";
     final static String START_RUN_URL = BASE_URL+"/startRun";
     final static String GET_RANDOM_URL = BASE_URL+"/getRandom";
 
