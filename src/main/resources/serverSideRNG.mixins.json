@@ -16,7 +16,9 @@
     "ServerWorldMixin",
     "MinecraftClientMixin",
     "LevelPropertiesMixin",
-    "ClientWorldMixin"
+    "ClientWorldMixin",
+    "CreditScreenMixin"
+
   ],
   "client": [
   ],
