@@ -3,8 +3,10 @@ package me.voidxwalker.serversiderng.auth;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.authlib.yggdrasil.YggdrasilMinecraftSessionService;
+import me.voidxwalker.serversiderng.ServerSideRng;
 import net.minecraft.client.MinecraftClient;
 import org.apache.commons.io.IOUtils;
+import org.apache.logging.log4j.Level;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -14,9 +16,7 @@ import java.net.MalformedURLException;
 import java.net.Proxy;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.Signature;
+import java.security.*;
 import java.util.Base64;
 import java.util.UUID;
 
@@ -31,40 +31,43 @@ public class ClientAuth {
     public ClientAuth() throws Exception {
         this.accessToken= MinecraftClient.getInstance().getSession().getAccessToken();
         this.proxy= ((YggdrasilMinecraftSessionService)MinecraftClient.getInstance().getSessionService()).getAuthenticationService().getProxy();
-        this.pair=PlayerKeyPair.fetchKeyPair(this.post(ClientAuth.constantURL("https://api.minecraftservices.com/player/certificates")));
+        this.pair=PlayerKeyPair.fetchKeyPair(readInputStream(postInternal(ClientAuth.constantURL(), new byte[0])));
     }
 
     public JsonObject createMessageJson( UUID sender, long randomLong) {
-        byte[] data = sign(sender,randomLong);
-        JsonObject output = new JsonObject();
-        output.addProperty("uuid",sender.getMostSignificantBits()+"/"+sender.getLeastSignificantBits());
-        output.addProperty("randomLong",""+randomLong);
-        output.addProperty("publicKey",Base64.getEncoder().encodeToString(pair.playerPublicKey.publicKey.getEncoded()));
-        output.addProperty("instant",pair.playerPublicKey.expirationDate.toEpochMilli());
-        output.addProperty("signatureBytes",Base64.getEncoder().encodeToString(pair.playerPublicKey.signatureBytes));
-        output.addProperty("data",Base64.getEncoder().encodeToString(data));
-        return output;
+        try{
+            byte[] data = sign(sender,randomLong);
+            JsonObject output = new JsonObject();
+            output.addProperty("uuid",sender.getMostSignificantBits()+"/"+sender.getLeastSignificantBits());
+            output.addProperty("randomLong",""+randomLong);
+            output.addProperty("publicKey",Base64.getEncoder().encodeToString(pair.playerPublicKey.publicKey.getEncoded()));
+            output.addProperty("instant",pair.playerPublicKey.expirationDate.toEpochMilli());
+            output.addProperty("signatureBytes",Base64.getEncoder().encodeToString(pair.playerPublicKey.signatureBytes));
+            output.addProperty("data",Base64.getEncoder().encodeToString(data));
+            return output;
+        } catch (GeneralSecurityException e) {
+            ServerSideRng.LOGGER.log(Level.WARN,"Failed to sign authentification message JSON: ");
+            e.printStackTrace();
+            return null;
+        }
+
     }
-    static URL constantURL(final String url) {
+    static URL constantURL() {
         try {
-            return new URL(url);
+            return new URL("https://api.minecraftservices.com/player/certificates");
         } catch (final MalformedURLException ex) {
-            throw new Error("Couldn't create constant for " + url, ex);
+            throw new Error("Couldn't create constant for " + "https://api.minecraftservices.com/player/certificates", ex);
         }
     }
 
-    byte[] sign(UUID sender, long randomLong) {
+    byte[] sign(UUID sender, long randomLong) throws GeneralSecurityException{
         Signature signature;
-        try {
             signature = Signature.getInstance(SIGNATURE_ALGORITHM);
             signature.initSign(pair.privateKey);
             signature.update((sender.getMostSignificantBits()+"/"+sender.getLeastSignificantBits()).getBytes(StandardCharsets.UTF_8));
             signature.update(Base64.getEncoder().encode(digest(randomLong)));
             return signature.sign();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
+
     }
     static byte[] digest(long randomLong) {
         MessageDigest digest;
@@ -77,9 +80,6 @@ public class ClientAuth {
         }
         return null;
 
-    }
-    KeyPairResponse post(final URL url) throws IOException {
-        return readInputStream(postInternal(url, new byte[0]));
     }
 
     KeyPairResponse readInputStream(final HttpURLConnection connection) throws IOException {

@@ -34,7 +34,8 @@ public class ServerSideRng implements ClientModInitializer {
     final static String GET_RANDOM_URL = BASE_URL+"/getRandom";
     final static String UPLOAD_HASH_URL = BASE_URL+"/uploadHash";
     final static String HASH_ALG = "MD5";
-    public final static File verificationFolder=new File("verification-zips");
+    final static String READ_ME_NAME = "readme.txt";
+    final static File verificationFolder=new File("verification-zips");
 
     public static CompletableFuture<Speedrun> speedrunCompletableFuture;
     public static Speedrun currentSpeedrun;
@@ -87,7 +88,7 @@ public class ServerSideRng implements ClientModInitializer {
     public static Speedrun createSpeedrunOrNull(){
         try {
             return new Speedrun(getStartRunToken());
-        } catch (IOException e) {
+        } catch (IOException | NullPointerException e) {
             ServerSideRng.LOGGER.warn("Failed to create new Speedrun: ");
             e.printStackTrace();
             return null;
@@ -96,10 +97,25 @@ public class ServerSideRng implements ClientModInitializer {
     static RNGHandler createRngHandlerOrNull(long runId){
         try {
             return new RNGHandler(getGetRandomToken(runId).get("random").getAsLong());
-        } catch (IOException e) {
+        } catch (IOException | NullPointerException e) {
             ServerSideRng.LOGGER.warn("Failed to create new RNGHandler: ");
             e.printStackTrace();
             return null;
+        }
+    }
+    public static void getAndUploadHash(){
+        try {
+            File logsFile = new File(MinecraftClient.getInstance().runDirectory,"logs/latest.log");
+
+            File worldFile = MinecraftClient.getInstance().getServer().getSavePath(WorldSavePath.ROOT).toFile().getParentFile();
+            File zipFile=  new File(ServerSideRng.verificationFolder, "verification-" + worldFile.getName()+".zip");
+            ServerSideRng.packZipFile(zipFile.getPath(),worldFile.getPath(),logsFile.getPath());
+            String hash=ServerSideRng.zipToHash(zipFile);
+            ServerSideRng.uploadLogHash(ServerSideRng.currentSpeedrun.runId,hash);
+            LOGGER.log(Level.INFO,"Successfully uploaded File Hash!");
+        } catch (Exception e) {
+            LOGGER.log(Level.WARN,"Failed to uploaded File Hash: ");
+            e.printStackTrace();
         }
     }
 
@@ -130,7 +146,7 @@ public class ServerSideRng implements ClientModInitializer {
         json.addProperty("uuid",uuid.toString());
         return makeRequest(json,START_RUN_URL);
     }
-    public static void pack(String zipFilePath,String worldFilePath,String logsFilePath ) throws IOException {
+    public static void packZipFile(String zipFilePath, String worldFilePath, String logsFilePath ) throws IOException {
         Path p = Files.createFile(Paths.get(zipFilePath));
         try (ZipOutputStream zs = new ZipOutputStream(Files.newOutputStream(p))) {
             Path pp = Paths.get(worldFilePath);
@@ -144,7 +160,7 @@ public class ServerSideRng implements ClientModInitializer {
                                 Files.copy(path, zs);
                                 zs.closeEntry();
                             } catch (IOException e) {
-                                System.err.println(e);
+                                e.printStackTrace();
                             }
                         }
 
@@ -157,17 +173,20 @@ public class ServerSideRng implements ClientModInitializer {
 
         }
     }
-    public static void getAndUploadHash(){
+    public static void prepareVerificationFolder() {
+        verificationFolder.mkdir();
+        File readMe = new File(ServerSideRng.verificationFolder,READ_ME_NAME);
         try {
-            File logsFile = new File(MinecraftClient.getInstance().runDirectory,"logs/latest.log");
-
-            File worldFile = MinecraftClient.getInstance().getServer().getSavePath(WorldSavePath.ROOT).toFile().getParentFile();
-            File zipFile=  new File(ServerSideRng.verificationFolder, "verification-" + worldFile.getName()+".zip");
-            ServerSideRng.pack(zipFile.getPath(),worldFile.getPath(),logsFile.getPath());
-            String hash=ServerSideRng.zipToHash(zipFile);
-            ServerSideRng.uploadLogHash(ServerSideRng.currentSpeedrun.runId,hash);
-            LOGGER.log(Level.INFO,"Successfully uploaded file Hash!");
-        } catch (IOException | NoSuchAlgorithmException e) {
+            if(readMe.createNewFile()){
+                try (FileWriter writer= new FileWriter(readMe)){
+                    writer.write("Submit the Verification Zip File with the name the world yo played your run in alongside your speedrun.com submission.\n");
+                    writer.write("Make sure not to alter the ZIP in any way, as that may lead your run becoming unverifiable.\n");
+                    writer.write("For more information read this: https://github.com/VoidXWalker/serverSideRNG/blob/master/README.md.\n");
+                    writer.write("If you have any problems or unanswered questions feel free to open a help thread in the Minecraft Java Edition Speedrunning Discord: https://discord.com/invite/jmdFn3C. ");
+                }
+            }
+        } catch (IOException e) {
+            LOGGER.log(Level.WARN,"Failed to create Verification Folder: ");
             e.printStackTrace();
         }
     }
@@ -175,7 +194,7 @@ public class ServerSideRng implements ClientModInitializer {
         MessageDigest digest = MessageDigest.getInstance(HASH_ALG);
         try(InputStream is = new FileInputStream(zipFile)){
             byte[] buffer = new byte[8192];
-            int read = 0;
+            int read;
             while( (read = is.read(buffer)) > 0) {
                 digest.update(buffer, 0, read);
             }
@@ -207,7 +226,7 @@ public class ServerSideRng implements ClientModInitializer {
     }
     @Override
     public void onInitializeClient() {
-        verificationFolder.mkdir();
+        CompletableFuture.runAsync(ServerSideRng::prepareVerificationFolder);
         ServerSideRng.clientAuthCompletableFuture=CompletableFuture.supplyAsync(ServerSideRng::createClientAuth);
         ServerSideRng.speedrunCompletableFuture= CompletableFuture.supplyAsync(ServerSideRng::createSpeedrunOrNull);
     }
