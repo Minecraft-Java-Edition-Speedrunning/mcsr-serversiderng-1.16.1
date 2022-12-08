@@ -1,7 +1,7 @@
 package me.voidxwalker.serversiderng.mixin;
 
 import me.voidxwalker.serversiderng.RNGHandler;
-import me.voidxwalker.serversiderng.ServerSideRng;
+import me.voidxwalker.serversiderng.Speedrun;
 import net.minecraft.entity.boss.dragon.EnderDragonEntity;
 import net.minecraft.entity.boss.dragon.phase.LandingApproachPhase;
 import org.spongepowered.asm.mixin.Mixin;
@@ -18,8 +18,8 @@ public class LandingApproachPhaseMixin {
      */
     @Redirect(method = "method_6845",at = @At(value = "INVOKE",target = "Lnet/minecraft/entity/boss/dragon/EnderDragonEntity;getRandom()Ljava/util/Random;"))
     public Random modifyTargetHeight(EnderDragonEntity instance){
-        if(ServerSideRng.inSpeedrun()){
-            return new Random(ServerSideRng.currentSpeedrun.getCurrentRNGHandler().getRngValue(RNGHandler.RNGTypes.ENDER_DRAGON_TARGET_HEIGHT));
+        if(Speedrun.inSpeedrun()){
+            return new Random(Speedrun.currentSpeedrun.getCurrentRNGHandler().getRngValue(RNGHandler.RNGTypes.ENDER_DRAGON_TARGET_HEIGHT));
         }
         return instance.getRandom();
     }

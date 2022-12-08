@@ -1,7 +1,7 @@
 package me.voidxwalker.serversiderng.mixin;
 
 import me.voidxwalker.serversiderng.RNGHandler;
-import me.voidxwalker.serversiderng.ServerSideRng;
+import me.voidxwalker.serversiderng.Speedrun;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
@@ -28,9 +28,9 @@ public abstract class LivingEntityMixin extends Entity {
      */
     @Inject(method = "dropLoot",at = @At(value = "INVOKE",target = "Lnet/minecraft/loot/LootTable;generateLoot(Lnet/minecraft/loot/context/LootContext;Ljava/util/function/Consumer;)V",shift = At.Shift.BEFORE),cancellable = true,locals = LocalCapture.CAPTURE_FAILEXCEPTION)
     private void modifyMobRandom(DamageSource source, boolean causedByPlayer, CallbackInfo ci, Identifier identifier, LootTable lootTable, net.minecraft.loot.context.LootContext.Builder builder){
-        if(ServerSideRng.inSpeedrun()){
+        if(Speedrun.inSpeedrun()){
             if(causedByPlayer){
-                lootTable.generateLoot(builder.random(ServerSideRng.currentSpeedrun.getCurrentRNGHandler().getRngValue(RNGHandler.RNGTypes.MOB_DROP)).build(LootContextTypes.ENTITY), this::dropStack);
+                lootTable.generateLoot(builder.random(Speedrun.currentSpeedrun.getCurrentRNGHandler().getRngValue(RNGHandler.RNGTypes.MOB_DROP)).build(LootContextTypes.ENTITY), this::dropStack);
                 ci.cancel();
             }
         }

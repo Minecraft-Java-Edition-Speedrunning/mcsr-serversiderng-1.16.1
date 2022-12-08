@@ -29,13 +29,13 @@ public class RNGHandler {
     public long getRngValue(RNGTypes type) {
         if(this.outOfNormalTime() ){
             if(this.outOfExtraTime()){
-                ServerSideRng.LOGGER.warn("RNGHandler called for type "+type.name()+" is in extra time!");
+                ServerSideRNG.LOGGER.warn("RNGHandler called for type "+type.name()+" is in extra time!");
             }
             else{
-                ServerSideRng.LOGGER.warn("RNGHandler called for type "+type.name()+" outside time!");
+                ServerSideRNG.LOGGER.warn("RNGHandler called for type "+type.name()+" outside time!");
             }
         }
-        ServerSideRng.LOGGER.info("Getting Random for "+type);
+        ServerSideRNG.LOGGER.info("["+ Speedrun.currentSpeedrun.runId+"] Getting Random for "+type);
         return randomMap.get(type).nextLong();
     }
     public void activate(){

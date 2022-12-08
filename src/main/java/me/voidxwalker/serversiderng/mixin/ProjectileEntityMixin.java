@@ -1,7 +1,7 @@
 package me.voidxwalker.serversiderng.mixin;
 
 import me.voidxwalker.serversiderng.RNGHandler;
-import me.voidxwalker.serversiderng.ServerSideRng;
+import me.voidxwalker.serversiderng.Speedrun;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
@@ -27,7 +27,7 @@ public abstract class ProjectileEntityMixin {
      */
     @Inject(method = "setVelocity",at = @At("HEAD"))
     public void getDivergence(double x, double y, double z, float speed, float divergence, CallbackInfo ci){
-        if(ServerSideRng.inSpeedrun()){
+        if(Speedrun.inSpeedrun()){
             this.serverSideRNG_divergence=divergence;
         }
     }
@@ -37,9 +37,9 @@ public abstract class ProjectileEntityMixin {
      */
     @Redirect(method = "setVelocity",at = @At(value = "INVOKE",target = "Lnet/minecraft/util/math/Vec3d;add(DDD)Lnet/minecraft/util/math/Vec3d;"))
     public Vec3d modifyArrowRandom(Vec3d instance, double x, double y, double z){
-        if(ServerSideRng.inSpeedrun()){
+        if(Speedrun.inSpeedrun()){
             if(this.getOwner() instanceof PlayerEntity){
-                Random random=new Random(ServerSideRng.currentSpeedrun.getCurrentRNGHandler().getRngValue(RNGHandler.RNGTypes.PROJECTILE));
+                Random random=new Random(Speedrun.currentSpeedrun.getCurrentRNGHandler().getRngValue(RNGHandler.RNGTypes.PROJECTILE));
                 instance.add(random.nextGaussian() * 0.007499999832361937D * (double)serverSideRNG_divergence, random.nextGaussian() * 0.007499999832361937D * (double)serverSideRNG_divergence, random.nextGaussian() * 0.007499999832361937D * (double)serverSideRNG_divergence);
                 return instance;
             }

@@ -1,7 +1,7 @@
 package me.voidxwalker.serversiderng.mixin;
 
 import me.voidxwalker.serversiderng.RNGHandler;
-import me.voidxwalker.serversiderng.ServerSideRng;
+import me.voidxwalker.serversiderng.Speedrun;
 import net.minecraft.entity.boss.dragon.EnderDragonFight;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -15,8 +15,8 @@ public class EnderDragonFightMixin {
      */
     @ModifyArg(method = "createDragon", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/boss/dragon/EnderDragonEntity;refreshPositionAndAngles(DDDFF)V"),index = 3)
     private float modifyDragonAngle(float originalRotation) {
-        if (ServerSideRng.inSpeedrun()) {
-            return ServerSideRng.currentSpeedrun.getCurrentRNGHandler().getRngValue(RNGHandler.RNGTypes.ENDER_DRAGON_ROTATION) % 360;
+        if (Speedrun.inSpeedrun()) {
+            return Speedrun.currentSpeedrun.getCurrentRNGHandler().getRngValue(RNGHandler.RNGTypes.ENDER_DRAGON_ROTATION) % 360;
         }
         else {
             return originalRotation;

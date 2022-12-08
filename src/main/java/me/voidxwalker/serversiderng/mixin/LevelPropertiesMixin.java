@@ -3,7 +3,7 @@ package me.voidxwalker.serversiderng.mixin;
 import com.mojang.datafixers.DataFixer;
 import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.Lifecycle;
-import me.voidxwalker.serversiderng.ServerSideRng;
+import me.voidxwalker.serversiderng.ServerSideRNG;
 import me.voidxwalker.serversiderng.Speedrun;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
@@ -26,8 +26,8 @@ public class LevelPropertiesMixin {
      */
     @Inject(method = "updateProperties",at = @At("TAIL"))
     public void saveRunId(RegistryTracker registryTracker, CompoundTag compoundTag, CompoundTag compoundTag2, CallbackInfo ci){
-        if(ServerSideRng.inSpeedrun()){
-            compoundTag.putLong("server-side-rng-runId", ServerSideRng.currentSpeedrun.runId);
+        if(Speedrun.inSpeedrun()){
+            compoundTag.putLong("server-side-rng-runId", Speedrun.currentSpeedrun.runId);
         }
     }
     /**
@@ -39,9 +39,9 @@ public class LevelPropertiesMixin {
     private static void loadRunId(Dynamic<Tag> dynamic, DataFixer dataFixer, int i, CompoundTag compoundTag, LevelInfo levelInfo, SaveVersionInfo saveVersionInfo, GeneratorOptions generatorOptions, Lifecycle lifecycle, CallbackInfoReturnable<LevelProperties> cir){
         if(dynamic.get("server-side-rng-runId").result().isPresent()){
             dynamic.get("server-side-rng-runId").asNumber().result().ifPresentOrElse(result -> {
-                ServerSideRng.currentSpeedrun= new Speedrun(result.longValue());
-                ServerSideRng.LOGGER.info("Successfully loaded RunID from file!");
-            },() -> ServerSideRng.LOGGER.warn("Failed to load RunID from file!"));
+                Speedrun.currentSpeedrun= new Speedrun(result.longValue());
+                ServerSideRNG.LOGGER.info("Successfully loaded RunID from file!");
+            },() -> ServerSideRNG.LOGGER.warn("Failed to load RunID from file!"));
         }
     }
 }

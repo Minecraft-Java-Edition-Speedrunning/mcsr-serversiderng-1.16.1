@@ -2,7 +2,7 @@ package me.voidxwalker.serversiderng.mixin;
 
 import me.voidxwalker.serversiderng.RNGHandler;
 import me.voidxwalker.serversiderng.RNGHandler.RNGTypes;
-import me.voidxwalker.serversiderng.ServerSideRng;
+import me.voidxwalker.serversiderng.Speedrun;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
@@ -28,9 +28,9 @@ public class BlockMixin {
      */
     @Inject(method = "getDroppedStacks(Lnet/minecraft/block/BlockState;Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/block/entity/BlockEntity;Lnet/minecraft/entity/Entity;Lnet/minecraft/item/ItemStack;)Ljava/util/List;",at = @At(value = "INVOKE",target = "Lnet/minecraft/block/BlockState;getDroppedStacks(Lnet/minecraft/loot/context/LootContext$Builder;)Ljava/util/List;",shift = At.Shift.BEFORE),locals = LocalCapture.CAPTURE_FAILEXCEPTION,cancellable = true)
     private static void modifyBlockDrops(BlockState state, ServerWorld world, BlockPos pos, BlockEntity blockEntity, Entity entity, ItemStack stack, CallbackInfoReturnable<List<ItemStack>> cir,net.minecraft.loot.context.LootContext.Builder builder){
-        if(ServerSideRng.currentSpeedrun!=null){
+        if(Speedrun.currentSpeedrun!=null){
             if(entity instanceof PlayerEntity){
-                builder.random(ServerSideRng.currentSpeedrun.getCurrentRNGHandler().getRngValue(RNGHandler.RNGTypes.BLOCK_DROP));
+                builder.random(Speedrun.currentSpeedrun.getCurrentRNGHandler().getRngValue(RNGHandler.RNGTypes.BLOCK_DROP));
                 cir.setReturnValue( state.getDroppedStacks(builder));
                 cir.cancel();
             }

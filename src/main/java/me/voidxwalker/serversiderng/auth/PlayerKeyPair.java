@@ -25,7 +25,7 @@ public class PlayerKeyPair {
         this.privateKey =privateKey;
         this.playerPublicKey =playerPublicKey;
     }
-    static PlayerKeyPair fetchKeyPair(KeyPairResponse keyPairResponse) throws Exception {
+    static PlayerKeyPair fetchKeyPair(KeyPairResponse keyPairResponse) throws IOException {
         if (keyPairResponse != null) {
             PublicKeyData publicKeyData = decodeKeyPairResponse(keyPairResponse);
             return new PlayerKeyPair(decodeRsaPrivateKeyPem(keyPairResponse.privateKey), publicKeyData);
@@ -33,21 +33,15 @@ public class PlayerKeyPair {
         throw new IOException("Could not retrieve profile key pair");
     }
 
-    static PublicKeyData decodeKeyPairResponse(KeyPairResponse keyPairResponse) throws Exception {
+    static PublicKeyData decodeKeyPairResponse(KeyPairResponse keyPairResponse) throws IOException {
         if (Strings.isNullOrEmpty(keyPairResponse.publicKey) || keyPairResponse.publicKeySignature == null || keyPairResponse.publicKeySignature.length == 0) {
-            throw new Exception();
+            throw new IOException("");
         }
-        try {
-            return new PublicKeyData(
+        return new PublicKeyData(
                     Instant.parse(keyPairResponse.expiresAt),
                     decodeRsaPublicKeyPem(keyPairResponse.publicKey),
                     keyPairResponse.publicKeySignature
             );
-        }
-        catch (IllegalArgumentException | DateTimeException | IOException runtimeException) {
-            runtimeException.printStackTrace();
-            throw new Exception(runtimeException);
-        }
     }
 
     static PrivateKey decodeRsaPrivateKeyPem(String string) throws IOException {

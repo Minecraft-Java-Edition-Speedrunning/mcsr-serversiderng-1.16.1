@@ -3,7 +3,7 @@ package me.voidxwalker.serversiderng.auth;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.authlib.yggdrasil.YggdrasilMinecraftSessionService;
-import me.voidxwalker.serversiderng.ServerSideRng;
+import me.voidxwalker.serversiderng.ServerSideRNG;
 import net.minecraft.client.MinecraftClient;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.Level;
@@ -28,7 +28,7 @@ public class ClientAuth {
     Proxy proxy;
     PlayerKeyPair pair;
 
-    public ClientAuth() throws Exception {
+    public ClientAuth() throws IOException {
         this.accessToken= MinecraftClient.getInstance().getSession().getAccessToken();
         this.proxy= ((YggdrasilMinecraftSessionService)MinecraftClient.getInstance().getSessionService()).getAuthenticationService().getProxy();
         this.pair=PlayerKeyPair.fetchKeyPair(readInputStream(postInternal(ClientAuth.constantURL(), new byte[0])));
@@ -45,8 +45,8 @@ public class ClientAuth {
             output.addProperty("signatureBytes",Base64.getEncoder().encodeToString(pair.playerPublicKey.signatureBytes));
             output.addProperty("data",Base64.getEncoder().encodeToString(data));
             return output;
-        } catch (GeneralSecurityException e) {
-            ServerSideRng.LOGGER.log(Level.WARN,"Failed to sign authentification message JSON: ");
+        } catch (Exception e) {
+            ServerSideRNG.LOGGER.log(Level.WARN,"Failed to sign authentification message JSON: ");
             e.printStackTrace();
             return null;
         }

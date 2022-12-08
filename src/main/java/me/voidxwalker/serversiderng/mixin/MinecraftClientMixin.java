@@ -1,6 +1,5 @@
 package me.voidxwalker.serversiderng.mixin;
 
-import me.voidxwalker.serversiderng.ServerSideRng;
 import me.voidxwalker.serversiderng.Speedrun;
 import net.minecraft.client.MinecraftClient;
 import org.spongepowered.asm.mixin.Mixin;
@@ -17,9 +16,9 @@ public class MinecraftClientMixin {
      */
     @Inject(method = "startIntegratedServer(Ljava/lang/String;Lnet/minecraft/util/registry/RegistryTracker$Modifiable;Ljava/util/function/Function;Lcom/mojang/datafixers/util/Function4;ZLnet/minecraft/client/MinecraftClient$WorldLoadAction;)V",at = @At(value = "INVOKE",target = "Lnet/minecraft/server/ServerNetworkIo;bindLocal()Ljava/net/SocketAddress;",shift = At.Shift.BEFORE))
     public void updateHandlerAfterWorldGen(CallbackInfo ci) {
-        if(ServerSideRng.inSpeedrun()){
-            if(ServerSideRng.currentSpeedrun.rngHandlerCompletableFuture.isDone()){
-                ServerSideRng.currentSpeedrun.getRngHandlerFromFuture();
+        if(Speedrun.inSpeedrun()){
+            if(Speedrun.currentSpeedrun.rngHandlerCompletableFuture.isDone()){
+                Speedrun.currentSpeedrun.getRngHandlerFromFuture();
             }
         }
     }
@@ -30,8 +29,8 @@ public class MinecraftClientMixin {
      */
     @Inject(method = "tick",at = @At("HEAD"))
     public void tick(CallbackInfo ci){
-        if(ServerSideRng.inSpeedrun()){
-            ServerSideRng.currentSpeedrun.updateRNGHandler();
+        if(Speedrun.inSpeedrun()){
+            Speedrun.currentSpeedrun.updateRNGHandler();
         }
     }
 }

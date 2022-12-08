@@ -1,7 +1,7 @@
 package me.voidxwalker.serversiderng.mixin;
 
 import me.voidxwalker.serversiderng.RNGHandler;
-import me.voidxwalker.serversiderng.ServerSideRng;
+import me.voidxwalker.serversiderng.Speedrun;
 import net.minecraft.entity.projectile.FishingBobberEntity;
 import net.minecraft.loot.context.LootContext;
 import org.spongepowered.asm.mixin.Mixin;
@@ -25,8 +25,8 @@ public class FishingBobberEntityMixin {
      */
     @Redirect(method = "use",at = @At(value = "INVOKE",target = "Lnet/minecraft/loot/context/LootContext$Builder;random(Ljava/util/Random;)Lnet/minecraft/loot/context/LootContext$Builder;"))
     public LootContext.Builder modifyFishingResultRandom(LootContext.Builder instance, Random random){
-        if(ServerSideRng.inSpeedrun()){
-            return instance.random(ServerSideRng.currentSpeedrun.getCurrentRNGHandler().getRngValue(RNGHandler.RNGTypes.FISHING_RESULT));
+        if(Speedrun.inSpeedrun()){
+            return instance.random(Speedrun.currentSpeedrun.getCurrentRNGHandler().getRngValue(RNGHandler.RNGTypes.FISHING_RESULT));
         }
         return instance.random(random);
     }
@@ -36,9 +36,9 @@ public class FishingBobberEntityMixin {
      */
     @ModifyArg(method = "tickFishingLogic",at = @At(value="INVOKE",target="Lnet/minecraft/util/math/MathHelper;nextInt(Ljava/util/Random;II)I"),index = 0)
     public Random modifyFishingTimeRandom(Random random){
-        if(ServerSideRng.inSpeedrun()){
+        if(Speedrun.inSpeedrun()){
             if(this.waitCountdown <= 0&&this.fishTravelCountdown <= 0&&this.hookCountdown <= 0){
-                return new Random(ServerSideRng.currentSpeedrun.getCurrentRNGHandler().getRngValue(RNGHandler.RNGTypes.FISHING_TIME));
+                return new Random(Speedrun.currentSpeedrun.getCurrentRNGHandler().getRngValue(RNGHandler.RNGTypes.FISHING_TIME));
             }
         }
         return random;

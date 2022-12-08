@@ -1,7 +1,7 @@
 package me.voidxwalker.serversiderng.mixin;
 
 import me.voidxwalker.serversiderng.RNGHandler;
-import me.voidxwalker.serversiderng.ServerSideRng;
+import me.voidxwalker.serversiderng.Speedrun;
 import net.minecraft.entity.mob.PiglinBrain;
 import net.minecraft.loot.context.LootContext;
 import org.spongepowered.asm.mixin.Mixin;
@@ -18,8 +18,8 @@ public class PiglinBrainMixin {
      */
     @Redirect(method = "getBarteredItem",at = @At(value = "INVOKE",target = "Lnet/minecraft/loot/context/LootContext$Builder;random(Ljava/util/Random;)Lnet/minecraft/loot/context/LootContext$Builder;"))
     private static LootContext.Builder modifyBarteredItem(LootContext.Builder instance, Random random){
-        if(ServerSideRng.inSpeedrun()){
-            return instance.random(ServerSideRng.currentSpeedrun.getCurrentRNGHandler().getRngValue(RNGHandler.RNGTypes.BARTER));
+        if(Speedrun.inSpeedrun()){
+            return instance.random(Speedrun.currentSpeedrun.getCurrentRNGHandler().getRngValue(RNGHandler.RNGTypes.BARTER));
         }
         return instance.random(random);
     }

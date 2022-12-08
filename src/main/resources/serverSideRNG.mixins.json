@@ -20,8 +20,6 @@
     "CreditScreenMixin"
 
   ],
-  "client": [
-  ],
   "injectors": {
     "defaultRequire": 1
   }

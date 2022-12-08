@@ -1,6 +1,7 @@
 package me.voidxwalker.serversiderng;
 
 import com.google.gson.JsonObject;
+import org.apache.logging.log4j.Level;
 
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
@@ -9,6 +10,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 public class Speedrun {
+    public static CompletableFuture<Speedrun> speedrunCompletableFuture;
+    public static Speedrun currentSpeedrun;
     public long runId;
     public final Random backUpRandom;
     public RNGHandler currentRNGHandler;
@@ -20,14 +23,40 @@ public class Speedrun {
         this.backUpRandom= new Random(random.nextLong());
         this.currentRNGHandler =new RNGHandler(random.nextLong());
         this.currentRNGHandler.activate();
-        this.rngHandlerCompletableFuture= CompletableFuture.supplyAsync(()-> ServerSideRng.createRngHandlerOrNull(this.runId));
+        this.rngHandlerCompletableFuture= CompletableFuture.supplyAsync(()-> ServerSideRNG.createRngHandlerOrNull(this.runId));
     }
     public Speedrun(long runId){
         this.runId=runId;
         this.currentRNGHandler =null;
-        this.rngHandlerCompletableFuture=CompletableFuture.supplyAsync(()-> ServerSideRng.createRngHandlerOrNull(this.runId));
+        this.rngHandlerCompletableFuture=CompletableFuture.supplyAsync(()-> ServerSideRNG.createRngHandlerOrNull(this.runId));
         this.backUpRandom=null;
     }
+
+    public static void startSpeedrun(){
+        if(speedrunCompletableFuture !=null){
+            try {
+                currentSpeedrun = speedrunCompletableFuture.get();
+
+
+            } catch (InterruptedException | ExecutionException e) {
+                ServerSideRNG.LOGGER.warn("Failed to start Speedrun!");
+                currentSpeedrun =null;
+            }
+        }
+        else {
+            currentSpeedrun = ServerSideRNG.createSpeedrunOrNull();
+
+        }
+        if(currentSpeedrun !=null){
+            ServerSideRNG.LOGGER.log(Level.INFO,"Started Speedrun for runID = "+ currentSpeedrun.runId);
+        }
+        speedrunCompletableFuture = CompletableFuture.supplyAsync(ServerSideRNG::createSpeedrunOrNull);
+    }
+
+    public static boolean inSpeedrun(){
+        return currentSpeedrun !=null && currentSpeedrun.getCurrentRNGHandler()!=null;
+    }
+
     public RNGHandler getCurrentRNGHandler(){
         this.updateRNGHandler();
         return this.currentRNGHandler;
@@ -41,16 +70,16 @@ public class Speedrun {
     public void updateRNGHandler(){
         if(this.currentRNGHandler ==null){
             if(this.rngHandlerCompletableFuture==null){
-                this.rngHandlerCompletableFuture=CompletableFuture.supplyAsync(()-> ServerSideRng.createRngHandlerOrNull(this.runId));
+                this.rngHandlerCompletableFuture=CompletableFuture.supplyAsync(()-> ServerSideRNG.createRngHandlerOrNull(this.runId));
             }
             this.getRngHandlerFromFuture();
         }
         else if(this.currentRNGHandler.outOfNormalTime()){
             if(this.rngHandlerCompletableFuture==null){
-                this.rngHandlerCompletableFuture=CompletableFuture.supplyAsync(()-> ServerSideRng.createRngHandlerOrNull(this.runId));
+                this.rngHandlerCompletableFuture=CompletableFuture.supplyAsync(()-> ServerSideRNG.createRngHandlerOrNull(this.runId));
             }
             if(this.rngHandlerCompletableFuture.isDone() ||!this.currentRNGHandler.outOfExtraTime()){
-                ServerSideRng.LOGGER.info("Current RNGHandler ran out of time, updating it!");
+                ServerSideRNG.LOGGER.info("Current RNGHandler ran out of time, updating it!");
                 this.getRngHandlerFromFuture();
             }
         }
@@ -65,21 +94,21 @@ public class Speedrun {
     public void getRngHandlerFromFuture() {
         try {
             this.currentRNGHandler = this.rngHandlerCompletableFuture.get(1L, TimeUnit.SECONDS);
-            ServerSideRng.LOGGER.info("Successfully updated the current RNGHandler!");
+            ServerSideRNG.LOGGER.info("Successfully updated the current RNGHandler!");
             this.currentRNGHandler.activate();
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
             e.printStackTrace();
         }
         if(this.currentRNGHandler ==null){
             if(backUpRandom!=null){
-                ServerSideRng.LOGGER.warn("Using RNGHandler created by the backup Random!");
+                ServerSideRNG.LOGGER.warn("Using RNGHandler created by the backup Random!");
                 this.currentRNGHandler =new RNGHandler(backUpRandom.nextLong());
                 this.currentRNGHandler.activate();
             }
             else {
-                ServerSideRng.LOGGER.warn("Failed to update the current RNGHandler!");
+                ServerSideRNG.LOGGER.warn("Failed to update the current RNGHandler!");
             }
         }
-        this.rngHandlerCompletableFuture=CompletableFuture.supplyAsync(()-> ServerSideRng.createRngHandlerOrNull(this.runId));
+        this.rngHandlerCompletableFuture=CompletableFuture.supplyAsync(()-> ServerSideRNG.createRngHandlerOrNull(this.runId));
     }
 }
