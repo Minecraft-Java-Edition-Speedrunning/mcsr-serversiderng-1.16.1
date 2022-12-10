@@ -22,6 +22,7 @@ import java.util.Optional;
 
 @Mixin(LevelProperties.class)
 public class LevelPropertiesMixin {
+    Long cachedRunID;
     /**
      * Saves the {@link Speedrun#runId} to the level.dat file.
      * @author Void_X_Walker
@@ -30,6 +31,10 @@ public class LevelPropertiesMixin {
     public void saveRunId(RegistryTracker registryTracker, CompoundTag compoundTag, CompoundTag compoundTag2, CallbackInfo ci){
         if(Speedrun.inSpeedrun()){
             compoundTag.putLong("server-side-rng-runId", Speedrun.currentSpeedrun.runId);
+            cachedRunID=Speedrun.currentSpeedrun.runId;
+        }
+        else if(cachedRunID!=null){
+            compoundTag.putLong("server-side-rng-runId", cachedRunID);
         }
     }
     /**
