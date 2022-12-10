@@ -35,11 +35,7 @@ public class ServerSideRNG implements ClientModInitializer {
     final static String UPLOAD_HASH_URL = BASE_URL+"/uploadHash";
     final static String HASH_ALG = "MD5";
     final static String READ_ME_NAME = "readme.txt";
-    final static String READ_ME= """
-            Submit the Verification Zip File with the name the world yo played your run in alongside your speedrun.com submission.
-            Make sure not to alter the ZIP in any way, as that may lead your run becoming unverifiable.
-            For more information read this: https://github.com/VoidXWalker/serverSideRNG/blob/master/README.md.
-            If you have any problems or unanswered questions feel free to open a help thread in the Minecraft Java Edition Speedrunning Discord: https://discord.com/invite/jmdFn3C.\s""";
+    final static String READ_ME= "Submit the Verification Zip File with the name the world yo played your run in alongside your speedrun.com submission.\nMake sure not to alter the ZIP in any way, as that may lead your run becoming unverifiable.\nFor more information read this: https://github.com/VoidXWalker/serverSideRNG/blob/master/README.md.\nIf you have any problems or unanswered questions feel free to open a help thread in the Minecraft Java Edition Speedrunning Discord: https://discord.com/invite/jmdFn3C.";
 
     final static File verificationFolder=new File("verification-zips");
 

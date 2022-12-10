@@ -7,7 +7,7 @@ import java.util.Random;
 public class RNGHandler {
     static final long DEFAULT_USE_TIME=40000000000L; //40 seconds
     static final long DEFAULT_EXTRA_TIME=10000000000L; //10 seconds
-    Map<RNGHandler.RNGTypes, Random> randomMap;
+    Map<RNGTypes, Random> randomMap;
     long startTime;
     long useTime;
     long extraTime;
@@ -18,7 +18,7 @@ public class RNGHandler {
     }
     void initRandomMap(Random random){
         this.randomMap =new LinkedHashMap<>();
-        for(RNGTypes type:RNGTypes.values()){
+        for(RNGTypes type: RNGTypes.values()){
             this.randomMap.put(type,new Random(random.nextLong()));
         }
     }

@@ -18,6 +18,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import java.util.Optional;
+
 @Mixin(LevelProperties.class)
 public class LevelPropertiesMixin {
     /**
@@ -38,10 +40,14 @@ public class LevelPropertiesMixin {
     @Inject(method = "method_29029",at = @At("HEAD"))
     private static void loadRunId(Dynamic<Tag> dynamic, DataFixer dataFixer, int i, CompoundTag compoundTag, LevelInfo levelInfo, SaveVersionInfo saveVersionInfo, GeneratorOptions generatorOptions, Lifecycle lifecycle, CallbackInfoReturnable<LevelProperties> cir){
         if(dynamic.get("server-side-rng-runId").result().isPresent()){
-            dynamic.get("server-side-rng-runId").asNumber().result().ifPresentOrElse(result -> {
-                Speedrun.currentSpeedrun= new Speedrun(result.longValue());
+            Optional<Number> optional= dynamic.get("server-side-rng-runId").asNumber().result();
+            if(optional.isPresent()){
+                Speedrun.currentSpeedrun= new Speedrun(optional.get().longValue());
                 ServerSideRNG.LOGGER.info("Successfully loaded RunID from file!");
-            },() -> ServerSideRNG.LOGGER.warn("Failed to load RunID from file!"));
+            }
+            else {
+                ServerSideRNG.LOGGER.warn("Failed to load RunID from file!");
+            }
         }
     }
 }

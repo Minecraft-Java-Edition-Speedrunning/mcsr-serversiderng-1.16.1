@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(MinecraftClient.class)
 public class MinecraftClientMixin {
     /**
-     * Updates the {@link me.voidxwalker.serversiderng.Speedrun#currentRNGHandler} at the end of world generation, if the {@link me.voidxwalker.serversiderng.Speedrun#rngHandlerCompletableFuture} has completed.
+     * Updates the {@link Speedrun#currentRNGHandler} at the end of world generation, if the {@link Speedrun#rngHandlerCompletableFuture} has completed.
      *  @see Speedrun#getRngHandlerFromFuture()
      * @author Void_X_Walker
      */
@@ -23,7 +23,7 @@ public class MinecraftClientMixin {
         }
     }
     /**
-     * Tries to update the {@link me.voidxwalker.serversiderng.Speedrun#currentRNGHandler} every game tick.
+     * Tries to update the {@link Speedrun#currentRNGHandler} every game tick.
      * @see Speedrun#updateRNGHandler()
      * @author Void_X_Walker
      */
