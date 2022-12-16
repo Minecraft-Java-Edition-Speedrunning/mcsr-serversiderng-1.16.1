@@ -68,7 +68,6 @@ public class GeneratorOptionsMixin {
     )
     private long ensureSeedConsistency2(OptionalLong instance) {
         if(RNGSession.inSession()&&!instance.isPresent()){
-            System.out.println(this.seed);
             return this.seed;
         }
         return instance.getAsLong();

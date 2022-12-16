@@ -4,7 +4,6 @@ import me.voidxwalker.serversiderng.RNGSession;
 import me.voidxwalker.serversiderng.ServerSideRNG;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.CreditsScreen;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.WorldSavePath;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
