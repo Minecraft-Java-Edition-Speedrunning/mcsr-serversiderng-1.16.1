@@ -55,10 +55,9 @@ public class GeneratorOptionsMixin {
      * @author Void_X_Walker
      * @see RNGHandler#getRngValue(RNGHandler.RNGTypes)
      */
-    @Redirect(method = "withHardcore",
-            at = @At(
-                    value = "INVOKE", target = "Ljava/util/OptionalLong;getAsLong()J", ordinal = 0
-            ),
+    @Redirect(
+            method = "withHardcore",
+            at = @At(value = "INVOKE", target = "Ljava/util/OptionalLong;getAsLong()J", ordinal = 0),
             slice = @Slice(
                     from = @At(value = "INVOKE", target = "Ljava/util/OptionalLong;orElse(J)J", shift = At.Shift.AFTER),
                     to = @At(value = "INVOKE", target = "Lnet/minecraft/world/gen/GeneratorOptions;isDebugWorld()Z", shift = At.Shift.BEFORE)
