@@ -9,6 +9,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
 import java.util.Random;
+import java.util.function.Supplier;
 
 @Mixin(PiglinBrain.class)
 public class PiglinBrainMixin {
@@ -19,14 +20,10 @@ public class PiglinBrainMixin {
      */
     @Redirect(method = "getBarteredItem",at = @At(value = "INVOKE",target = "Lnet/minecraft/loot/context/LootContext$Builder;random(Ljava/util/Random;)Lnet/minecraft/loot/context/LootContext$Builder;"))
     private static LootContext.Builder modifyBarteredItem(LootContext.Builder instance, Random random) {
-        if (RNGSession.inSession()) {
-            return instance.random(
-                RNGSession
-                    .getInstance()
-                    .getCurrentRNGHandler()
-                    .getRngValue(RNGHandler.RNGTypes.BARTER)
-            );
-        }
-        return instance.random(random);
+        Random targetRandom = RNGSession.getRngContext(RNGHandler.RNGTypes.BARTER)
+            .map(Supplier::get)
+            .map(Random::new)
+            .orElse(random);
+        return instance.random(targetRandom);
     }
 }

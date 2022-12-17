@@ -7,6 +7,8 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
 
+import java.util.function.Supplier;
+
 @Mixin(EnderDragonFight.class)
 public class EnderDragonFightMixin {
     /**
@@ -21,9 +23,9 @@ public class EnderDragonFightMixin {
             index = 3
     )
     private float modifyDragonAngle(float originalRotation) {
-        if (RNGSession.inSession()) {
-            return RNGSession.getInstance().getCurrentRNGHandler().getRngValue(RNGHandler.RNGTypes.ENDER_DRAGON_ROTATION) % 360;
-        }
-        return originalRotation;
+        return RNGSession.getRngContext(RNGHandler.RNGTypes.ENDER_DRAGON_ROTATION)
+            .map(Supplier::get)
+            .map((it) -> (float) it % 360)
+            .orElse(originalRotation);
     }
 }

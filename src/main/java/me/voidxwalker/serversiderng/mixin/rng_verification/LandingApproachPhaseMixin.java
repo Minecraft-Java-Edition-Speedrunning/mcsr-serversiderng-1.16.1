@@ -9,6 +9,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
 import java.util.Random;
+import java.util.function.Supplier;
 
 @Mixin(LandingApproachPhase.class)
 public class LandingApproachPhaseMixin {
@@ -19,13 +20,10 @@ public class LandingApproachPhaseMixin {
      */
     @Redirect(method = "method_6845", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/boss/dragon/EnderDragonEntity;getRandom()Ljava/util/Random;"))
     public Random modifyTargetHeight(EnderDragonEntity instance) {
-        if (RNGSession.inSession()) {
-            return new Random(
-                RNGSession
-                    .getInstance()
-                    .getCurrentRNGHandler()
-                    .getRngValue(RNGHandler.RNGTypes.ENDER_DRAGON_TARGET_HEIGHT));
-        }
-        return instance.getRandom();
+        return RNGSession
+            .getRngContext(RNGHandler.RNGTypes.ENDER_DRAGON_TARGET_HEIGHT)
+            .map(Supplier::get)
+            .map(Random::new)
+            .orElse(instance.getRandom());
     }
 }
