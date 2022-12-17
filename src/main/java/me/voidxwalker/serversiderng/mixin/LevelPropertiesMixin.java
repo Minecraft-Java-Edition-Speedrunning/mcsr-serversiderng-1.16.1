@@ -28,13 +28,13 @@ public class LevelPropertiesMixin {
      * Saves the {@link RNGSession#runId} to the level.dat file.
      * @author Void_X_Walker
      */
-    @Inject(method = "updateProperties",at = @At("TAIL"))
-    public void saveRunId(RegistryTracker registryTracker, CompoundTag compoundTag, CompoundTag compoundTag2, CallbackInfo ci){
-        if(RNGSession.inSession()){
+    @Inject(method = "updateProperties", at = @At("TAIL"))
+    public void saveRunId(RegistryTracker registryTracker, CompoundTag compoundTag, CompoundTag compoundTag2, CallbackInfo ci) {
+        if (RNGSession.inSession()) {
             compoundTag.putLong("server-side-rng-runId", RNGSession.getInstance().runId);
             serverSideRNG_cachedRunID = RNGSession.getInstance().runId;
         }
-        else if(serverSideRNG_cachedRunID !=null){
+        else if (serverSideRNG_cachedRunID != null) {
             compoundTag.putLong("server-side-rng-runId", serverSideRNG_cachedRunID);
         }
     }
@@ -43,11 +43,21 @@ public class LevelPropertiesMixin {
      * @see RNGSession#RNGSession(long)
      * @author Void_X_Walker
      */
-    @Inject(method = "method_29029",at = @At("HEAD"))
-    private static void loadRunId(Dynamic<Tag> dynamic, DataFixer dataFixer, int i, CompoundTag compoundTag, LevelInfo levelInfo, SaveVersionInfo saveVersionInfo, GeneratorOptions generatorOptions, Lifecycle lifecycle, CallbackInfoReturnable<LevelProperties> cir){
-        if(dynamic.get("server-side-rng-runId").result().isPresent()){
-            Optional<Number> optional= dynamic.get("server-side-rng-runId").asNumber().result();
-            if(optional.isPresent()){
+    @Inject(method = "method_29029", at = @At("HEAD"))
+    private static void loadRunId(
+            Dynamic<Tag> dynamic,
+            DataFixer dataFixer,
+            int i,
+            CompoundTag compoundTag,
+            LevelInfo levelInfo,
+            SaveVersionInfo saveVersionInfo,
+            GeneratorOptions generatorOptions,
+            Lifecycle lifecycle,
+            CallbackInfoReturnable<LevelProperties> cir
+    ) {
+        if (dynamic.get("server-side-rng-runId").result().isPresent()) {
+            Optional<Number> optional = dynamic.get("server-side-rng-runId").asNumber().result();
+            if (optional.isPresent()) {
                 RNGSession.instance = new RNGSession(optional.get().longValue());
                 ServerSideRNG.LOGGER.info("Successfully loaded RunID from file!");
             }

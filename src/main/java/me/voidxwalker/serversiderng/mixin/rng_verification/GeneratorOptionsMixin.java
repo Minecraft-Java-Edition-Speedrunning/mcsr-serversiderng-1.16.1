@@ -25,13 +25,11 @@ public class GeneratorOptionsMixin {
      * @author Void_X_Walker
      * @see RNGHandler#getRngValue(RNGHandler.RNGTypes) 
      */
-    @Inject(method = "withHardcore",
-            at = @At(
-                    value = "HEAD")
-    )
+    @Inject(method = "withHardcore", at = @At(value = "HEAD"))
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     private void modifySeedRandom(boolean hardcore, OptionalLong seed, CallbackInfoReturnable<GeneratorOptions> cir) {
-        if(RNGSession.inSession()){
-           this.seed= RNGSession.getInstance().getCurrentRNGHandler().getRngValue(RNGHandler.RNGTypes.WORLD_SEED);
+        if (RNGSession.inSession()) {
+           this.seed = RNGSession.getInstance().getCurrentRNGHandler().getRngValue(RNGHandler.RNGTypes.WORLD_SEED);
         }
     }
 
@@ -40,15 +38,15 @@ public class GeneratorOptionsMixin {
      * @author Void_X_Walker
      * @see RNGHandler#getRngValue(RNGHandler.RNGTypes)
      */
-    @Redirect(method = "withHardcore",
-            at = @At(
-                    value = "INVOKE",target = "Ljava/util/OptionalLong;isPresent()Z",ordinal = 0
-            ),
+    @Redirect(
+            method = "withHardcore",
+            at = @At(value = "INVOKE", target = "Ljava/util/OptionalLong;isPresent()Z", ordinal = 0),
             slice = @Slice(
-                    from = @At(value = "INVOKE", target = "Ljava/util/OptionalLong;orElse(J)J",shift = At.Shift.AFTER),
-                    to = @At(value = "INVOKE", target = "Lnet/minecraft/world/gen/GeneratorOptions;isDebugWorld()Z",shift = At.Shift.BEFORE)
+                    from = @At(value = "INVOKE", target = "Ljava/util/OptionalLong;orElse(J)J", shift = At.Shift.AFTER),
+                    to = @At(value = "INVOKE", target = "Lnet/minecraft/world/gen/GeneratorOptions;isDebugWorld()Z", shift = At.Shift.BEFORE)
             )
     )
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     private boolean ensureSeedConsistency(OptionalLong instance) {
         return RNGSession.inSession() || instance.isPresent();
     }
@@ -59,15 +57,16 @@ public class GeneratorOptionsMixin {
      */
     @Redirect(method = "withHardcore",
             at = @At(
-                    value = "INVOKE",target = "Ljava/util/OptionalLong;getAsLong()J",ordinal = 0
+                    value = "INVOKE", target = "Ljava/util/OptionalLong;getAsLong()J", ordinal = 0
             ),
             slice = @Slice(
-                    from = @At(value = "INVOKE", target = "Ljava/util/OptionalLong;orElse(J)J",shift = At.Shift.AFTER),
-                    to = @At(value = "INVOKE", target = "Lnet/minecraft/world/gen/GeneratorOptions;isDebugWorld()Z",shift = At.Shift.BEFORE)
+                    from = @At(value = "INVOKE", target = "Ljava/util/OptionalLong;orElse(J)J", shift = At.Shift.AFTER),
+                    to = @At(value = "INVOKE", target = "Lnet/minecraft/world/gen/GeneratorOptions;isDebugWorld()Z", shift = At.Shift.BEFORE)
             )
     )
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     private long ensureSeedConsistency2(OptionalLong instance) {
-        if(RNGSession.inSession()&&!instance.isPresent()){
+        if (RNGSession.inSession() && !instance.isPresent()) {
             return this.seed;
         }
         return instance.getAsLong();

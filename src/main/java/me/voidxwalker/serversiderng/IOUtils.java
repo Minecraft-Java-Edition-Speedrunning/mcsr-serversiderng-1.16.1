@@ -34,7 +34,7 @@ public class IOUtils {
                     .filter(path -> !Files.isDirectory(path))
                     .forEach(path -> {
                         ZipEntry zipEntry = new ZipEntry(pp.relativize(path).toString());
-                        if(!zipEntry.getName().equals("session.lock")){
+                        if (!zipEntry.getName().equals("session.lock")) {
                             try {
                                 zs.putNextEntry(zipEntry);
                                 Files.copy(path, zs);
@@ -45,7 +45,7 @@ public class IOUtils {
                         }
 
                     });
-            Path path =Paths.get(logsFilePath);
+            Path path = Paths.get(logsFilePath);
             ZipEntry zipEntry = new ZipEntry(path.toFile().getName());
             zs.putNextEntry(zipEntry);
             Files.copy(path,zs);
@@ -62,7 +62,7 @@ public class IOUtils {
      */
     static String zipToHash(File zipFile) throws IOException, NoSuchAlgorithmException {
         MessageDigest digest = MessageDigest.getInstance(ServerSideRNG.HASH_ALG);
-        try(InputStream is = new FileInputStream(zipFile)){
+        try(InputStream is = Files.newInputStream(zipFile.toPath())) {
             byte[] buffer = new byte[8192];
             int read;
             while( (read = is.read(buffer)) > 0) {
@@ -76,11 +76,11 @@ public class IOUtils {
      * @author Void_X_Walker
      */
     static void prepareVerificationFolder() {
-        if(ServerSideRNG.verificationFolder.mkdir()){
+        if (ServerSideRNG.verificationFolder.mkdir()) {
             File readMe = new File(ServerSideRNG.verificationFolder, ServerSideRNG.READ_ME_NAME);
             try {
-                if(readMe.createNewFile()){
-                    try (FileWriter writer= new FileWriter(readMe)){
+                if (readMe.createNewFile()) {
+                    try (FileWriter writer = new FileWriter(readMe)) {
                         writer.write(ServerSideRNG.READ_ME);
                     }
                 }
@@ -104,15 +104,15 @@ public class IOUtils {
         httpURLConnection.setRequestMethod("POST");
         httpURLConnection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
         httpURLConnection.setDoOutput(true);
-        try(OutputStream os = httpURLConnection.getOutputStream()){
+        try (OutputStream os = httpURLConnection.getOutputStream()) {
             os.write(input.toString().getBytes(StandardCharsets.UTF_8));
             os.flush();
         }
         if (httpURLConnection.getResponseCode() == HttpURLConnection.HTTP_OK) {
             String inputLine;
             StringBuilder response = new StringBuilder();
-            try(BufferedReader in = new BufferedReader(new InputStreamReader(httpURLConnection.getInputStream()))){
-                while ((inputLine = in .readLine()) != null) {
+            try (BufferedReader in = new BufferedReader(new InputStreamReader(httpURLConnection.getInputStream()))) {
+                while ((inputLine = in.readLine()) != null) {
                     response.append(inputLine);
                 }
             }

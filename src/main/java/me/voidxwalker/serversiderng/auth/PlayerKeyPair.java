@@ -21,9 +21,9 @@ public class PlayerKeyPair {
     private static final String RSA_PRIVATE_KEY_PREFIX = "-----BEGIN RSA PRIVATE KEY-----";
     private static final String RSA_PRIVATE_KEY_SUFFIX = "-----END RSA PRIVATE KEY-----";
     private static final String RSA = "RSA";
-    public PlayerKeyPair(PrivateKey privateKey, PublicKeyData playerPublicKey){
-        this.privateKey =privateKey;
-        this.playerPublicKey =playerPublicKey;
+    public PlayerKeyPair(PrivateKey privateKey, PublicKeyData playerPublicKey) {
+        this.privateKey = privateKey;
+        this.playerPublicKey = playerPublicKey;
     }
     static PlayerKeyPair fetchKeyPair(KeyPairResponse keyPairResponse) throws IOException {
         if (keyPairResponse != null) {
@@ -34,18 +34,27 @@ public class PlayerKeyPair {
     }
 
     static PublicKeyData decodeKeyPairResponse(KeyPairResponse keyPairResponse) throws IOException {
-        if (Strings.isNullOrEmpty(keyPairResponse.publicKey) || keyPairResponse.publicKeySignature == null || keyPairResponse.publicKeySignature.length == 0) {
+        if (
+            Strings.isNullOrEmpty(keyPairResponse.publicKey)
+            || keyPairResponse.publicKeySignature == null
+            || keyPairResponse.publicKeySignature.length == 0
+        ) {
             throw new IOException("");
         }
         return new PublicKeyData(
-                    Instant.parse(keyPairResponse.expiresAt),
-                    decodeRsaPublicKeyPem(keyPairResponse.publicKey),
-                    keyPairResponse.publicKeySignature
-            );
+            Instant.parse(keyPairResponse.expiresAt),
+            decodeRsaPublicKeyPem(keyPairResponse.publicKey),
+            keyPairResponse.publicKeySignature
+        );
     }
 
     static PrivateKey decodeRsaPrivateKeyPem(String string) throws IOException {
-        return decodePem(string, RSA_PRIVATE_KEY_PREFIX, RSA_PRIVATE_KEY_SUFFIX, PlayerKeyPair::decodeEncodedRsaPrivateKey);
+        return decodePem(
+            string,
+            RSA_PRIVATE_KEY_PREFIX,
+            RSA_PRIVATE_KEY_SUFFIX,
+            PlayerKeyPair::decodeEncodedRsaPrivateKey
+        );
     }
     static PrivateKey decodeEncodedRsaPrivateKey(byte[] bs) throws IOException {
         try {
@@ -58,7 +67,12 @@ public class PlayerKeyPair {
         }
     }
     static PublicKey decodeRsaPublicKeyPem(String string) throws IOException {
-        return decodePem(string, RSA_PUBLIC_KEY_PREFIX, RSA_PUBLIC_KEY_SUFFIX, PlayerKeyPair::decodeEncodedRsaPublicKey);
+        return decodePem(
+            string,
+            RSA_PUBLIC_KEY_PREFIX,
+            RSA_PUBLIC_KEY_SUFFIX,
+            PlayerKeyPair::decodeEncodedRsaPublicKey
+        );
     }
     static PublicKey decodeEncodedRsaPublicKey(byte[] bs) throws IOException {
         try {
@@ -70,7 +84,12 @@ public class PlayerKeyPair {
             throw new IOException(exception);
         }
     }
-    static <T extends Key> T decodePem(String string, String string2, String string3, KeyDecoder<T> keyDecoder) throws IOException {
+    static <T extends Key> T decodePem(
+            String string,
+            String string2,
+            String string3,
+            KeyDecoder<T> keyDecoder
+    ) throws IOException {
         int i = string.indexOf(string2);
         if (i != -1) {
             int j = string.indexOf(string3, i += string2.length());
@@ -87,10 +106,10 @@ public class PlayerKeyPair {
         public Instant expirationDate;
         public PublicKey publicKey;
         public byte[] signatureBytes;
-        public PublicKeyData(Instant instant, PublicKey publicKey, byte[] signatureBytes){
-            this.expirationDate =instant;
-            this.publicKey =publicKey;
-            this.signatureBytes =signatureBytes;
+        public PublicKeyData(Instant instant, PublicKey publicKey, byte[] signatureBytes) {
+            this.expirationDate = instant;
+            this.publicKey = publicKey;
+            this.signatureBytes = signatureBytes;
         }
     }
     interface KeyDecoder<T extends Key> {
@@ -102,18 +121,18 @@ public class PlayerKeyPair {
         String privateKey;
         String publicKey;
 
-        KeyPairResponse(String expiresAt,byte[] publicKeySignature,String privateKey,String publicKey){
-            this.expiresAt=expiresAt;
-            this.publicKeySignature=publicKeySignature;
-            this.privateKey=privateKey;
-            this.publicKey=publicKey;
+        KeyPairResponse(String expiresAt, byte[] publicKeySignature, String privateKey, String publicKey) {
+            this.expiresAt = expiresAt;
+            this.publicKeySignature = publicKeySignature;
+            this.privateKey = privateKey;
+            this.publicKey = publicKey;
         }
-        static KeyPairResponse fromJson(JsonObject jsonObject){
+        static KeyPairResponse fromJson(JsonObject jsonObject) {
             return new KeyPairResponse(
-                    jsonObject.get("expiresAt").getAsString(),
-                    Base64.getDecoder().decode(jsonObject.get("publicKeySignatureV2").getAsString()),
-                    jsonObject.get("keyPair").getAsJsonObject().get("privateKey").getAsString(),
-                    jsonObject.get("keyPair").getAsJsonObject().get("publicKey").getAsString()
+                jsonObject.get("expiresAt").getAsString(),
+                Base64.getDecoder().decode(jsonObject.get("publicKeySignatureV2").getAsString()),
+                jsonObject.get("keyPair").getAsJsonObject().get("privateKey").getAsString(),
+                jsonObject.get("keyPair").getAsJsonObject().get("publicKey").getAsString()
             );
         }
     }

@@ -21,10 +21,15 @@ public class CreditScreenMixin {
      * @param endCredits will not activate if called on the {@link net.minecraft.client.gui.screen.TitleScreen}.
      * @author Void_X_Walker
      */
-     @Inject(method = "<init>",at = @At("TAIL"))
-     public void initCreditsScreen(boolean endCredits, Runnable finishAction, CallbackInfo ci){
-         if(endCredits&& RNGSession.inSession()&& MinecraftClient.getInstance().getServer()!=null){
-             File worldFile = MinecraftClient.getInstance().getServer().getSavePath(WorldSavePath.ROOT).toFile().getParentFile();
+     @Inject(method = "<init>", at = @At("TAIL"))
+     public void initCreditsScreen(boolean endCredits, Runnable finishAction, CallbackInfo ci) {
+         if (endCredits && RNGSession.inSession() && MinecraftClient.getInstance().getServer() != null) {
+             File worldFile = MinecraftClient
+                     .getInstance()
+                     .getServer()
+                     .getSavePath(WorldSavePath.ROOT)
+                     .toFile()
+                     .getParentFile();
              CompletableFuture.runAsync(()-> ServerSideRNG.getAndUploadHash(worldFile));
          }
      }

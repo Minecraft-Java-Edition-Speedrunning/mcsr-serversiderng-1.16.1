@@ -27,10 +27,24 @@ public class BlockMixin {
      * @see RNGHandler#getRngValue(RNGHandler.RNGTypes)
      * @author Void_X_Walker
      */
-    @Inject(method = "getDroppedStacks(Lnet/minecraft/block/BlockState;Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/block/entity/BlockEntity;Lnet/minecraft/entity/Entity;Lnet/minecraft/item/ItemStack;)Ljava/util/List;",at = @At(value = "INVOKE",target = "Lnet/minecraft/block/BlockState;getDroppedStacks(Lnet/minecraft/loot/context/LootContext$Builder;)Ljava/util/List;",shift = At.Shift.BEFORE),locals = LocalCapture.CAPTURE_FAILEXCEPTION,cancellable = true)
-    private static void modifyBlockDrops(BlockState state, ServerWorld world, BlockPos pos, BlockEntity blockEntity, Entity entity, ItemStack stack, CallbackInfoReturnable<List<ItemStack>> cir,net.minecraft.loot.context.LootContext.Builder builder){
-        if(RNGSession.getInstance() !=null){
-            if(entity instanceof PlayerEntity){
+    @Inject(
+            method = "getDroppedStacks(Lnet/minecraft/block/BlockState;Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/block/entity/BlockEntity;Lnet/minecraft/entity/Entity;Lnet/minecraft/item/ItemStack;)Ljava/util/List;",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/block/BlockState;getDroppedStacks(Lnet/minecraft/loot/context/LootContext$Builder;)Ljava/util/List;", shift = At.Shift.BEFORE),
+            locals = LocalCapture.CAPTURE_FAILEXCEPTION,
+            cancellable = true
+    )
+    private static void modifyBlockDrops(
+            BlockState state,
+            ServerWorld world,
+            BlockPos pos,
+            BlockEntity blockEntity,
+            Entity entity,
+            ItemStack stack,
+            CallbackInfoReturnable<List<ItemStack>> cir,
+            net.minecraft.loot.context.LootContext.Builder builder
+    ) {
+        if (RNGSession.getInstance() != null) {
+            if (entity instanceof PlayerEntity) {
                 builder.random(RNGSession.getInstance().getCurrentRNGHandler().getRngValue(RNGTypes.BLOCK_DROP));
                 cir.setReturnValue( state.getDroppedStacks(builder));
                 cir.cancel();

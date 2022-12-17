@@ -27,11 +27,34 @@ public abstract class LivingEntityMixin extends Entity {
      * @see RNGHandler#getRngValue(RNGHandler.RNGTypes)
      * @author Void_X_Walker
      */
-    @Inject(method = "dropLoot",at = @At(value = "INVOKE",target = "Lnet/minecraft/loot/LootTable;generateLoot(Lnet/minecraft/loot/context/LootContext;Ljava/util/function/Consumer;)V",shift = At.Shift.BEFORE),cancellable = true,locals = LocalCapture.CAPTURE_FAILEXCEPTION)
-    private void modifyMobRandom(DamageSource source, boolean causedByPlayer, CallbackInfo ci, Identifier identifier, LootTable lootTable, net.minecraft.loot.context.LootContext.Builder builder){
-        if(RNGSession.inSession()){
-            if(causedByPlayer){
-                lootTable.generateLoot(builder.random(RNGSession.getInstance().getCurrentRNGHandler().getRngValue(RNGHandler.RNGTypes.MOB_DROP)).build(LootContextTypes.ENTITY), this::dropStack);
+    @Inject(
+            method = "dropLoot",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/loot/LootTable;generateLoot(Lnet/minecraft/loot/context/LootContext;Ljava/util/function/Consumer;)V",
+                    shift = At.Shift.BEFORE
+            ),
+            cancellable = true,
+            locals = LocalCapture.CAPTURE_FAILEXCEPTION
+    )
+    private void modifyMobRandom(
+            DamageSource source,
+            boolean causedByPlayer,
+            CallbackInfo ci,
+            Identifier identifier,
+            LootTable lootTable,
+            net.minecraft.loot.context.LootContext.Builder builder
+    ) {
+        if (RNGSession.inSession()) {
+            if (causedByPlayer) {
+                lootTable.generateLoot(
+                        builder.random(
+                            RNGSession.getInstance()
+                                .getCurrentRNGHandler()
+                                .getRngValue(RNGHandler.RNGTypes.MOB_DROP)
+                        ).build(LootContextTypes.ENTITY),
+                        this::dropStack
+                );
                 ci.cancel();
             }
         }

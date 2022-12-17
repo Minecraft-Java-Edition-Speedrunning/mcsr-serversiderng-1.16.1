@@ -17,10 +17,14 @@ public class LandingApproachPhaseMixin {
      * @see RNGHandler#getRngValue(RNGHandler.RNGTypes)
      * @author Void_X_Walker
      */
-    @Redirect(method = "method_6845",at = @At(value = "INVOKE",target = "Lnet/minecraft/entity/boss/dragon/EnderDragonEntity;getRandom()Ljava/util/Random;"))
-    public Random modifyTargetHeight(EnderDragonEntity instance){
-        if(RNGSession.inSession()){
-            return new Random(RNGSession.getInstance().getCurrentRNGHandler().getRngValue(RNGHandler.RNGTypes.ENDER_DRAGON_TARGET_HEIGHT));
+    @Redirect(method = "method_6845", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/boss/dragon/EnderDragonEntity;getRandom()Ljava/util/Random;"))
+    public Random modifyTargetHeight(EnderDragonEntity instance) {
+        if (RNGSession.inSession()) {
+            return new Random(
+                RNGSession
+                    .getInstance()
+                    .getCurrentRNGHandler()
+                    .getRngValue(RNGHandler.RNGTypes.ENDER_DRAGON_TARGET_HEIGHT));
         }
         return instance.getRandom();
     }

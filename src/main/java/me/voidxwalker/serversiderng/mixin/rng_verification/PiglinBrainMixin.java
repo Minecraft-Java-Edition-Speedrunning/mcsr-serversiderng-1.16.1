@@ -18,9 +18,14 @@ public class PiglinBrainMixin {
      * @author Void_X_Walker
      */
     @Redirect(method = "getBarteredItem",at = @At(value = "INVOKE",target = "Lnet/minecraft/loot/context/LootContext$Builder;random(Ljava/util/Random;)Lnet/minecraft/loot/context/LootContext$Builder;"))
-    private static LootContext.Builder modifyBarteredItem(LootContext.Builder instance, Random random){
-        if(RNGSession.inSession()){
-            return instance.random(RNGSession.getInstance().getCurrentRNGHandler().getRngValue(RNGHandler.RNGTypes.BARTER));
+    private static LootContext.Builder modifyBarteredItem(LootContext.Builder instance, Random random) {
+        if (RNGSession.inSession()) {
+            return instance.random(
+                RNGSession
+                    .getInstance()
+                    .getCurrentRNGHandler()
+                    .getRngValue(RNGHandler.RNGTypes.BARTER)
+            );
         }
         return instance.random(random);
     }

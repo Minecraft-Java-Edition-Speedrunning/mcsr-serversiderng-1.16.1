@@ -14,10 +14,13 @@ public class MinecraftClientMixin {
      * @see RNGSession#getRngHandlerFromFuture()
      * @author Void_X_Walker
      */
-    @Inject(method = "startIntegratedServer(Ljava/lang/String;Lnet/minecraft/util/registry/RegistryTracker$Modifiable;Ljava/util/function/Function;Lcom/mojang/datafixers/util/Function4;ZLnet/minecraft/client/MinecraftClient$WorldLoadAction;)V",at = @At(value = "INVOKE",target = "Lnet/minecraft/server/ServerNetworkIo;bindLocal()Ljava/net/SocketAddress;",shift = At.Shift.BEFORE))
+    @Inject(
+            method = "startIntegratedServer(Ljava/lang/String;Lnet/minecraft/util/registry/RegistryTracker$Modifiable;Ljava/util/function/Function;Lcom/mojang/datafixers/util/Function4;ZLnet/minecraft/client/MinecraftClient$WorldLoadAction;)V",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/server/ServerNetworkIo;bindLocal()Ljava/net/SocketAddress;", shift = At.Shift.BEFORE)
+    )
     public void updateHandlerAfterWorldGen(CallbackInfo ci) {
-        if(RNGSession.inSession()){
-            if(RNGSession.getInstance().rngHandlerCompletableFuture.isDone()){
+        if (RNGSession.inSession()) {
+            if (RNGSession.getInstance().rngHandlerCompletableFuture.isDone()) {
                 RNGSession.getInstance().getRngHandlerFromFuture();
             }
         }
@@ -27,9 +30,9 @@ public class MinecraftClientMixin {
      * @see RNGSession#updateRNGHandler()
      * @author Void_X_Walker
      */
-    @Inject(method = "tick",at = @At("HEAD"))
-    public void tick(CallbackInfo ci){
-        if(RNGSession.inSession()){
+    @Inject(method = "tick", at = @At("HEAD"))
+    public void tick(CallbackInfo ci) {
+        if (RNGSession.inSession()) {
             RNGSession.getInstance().updateRNGHandler();
         }
     }

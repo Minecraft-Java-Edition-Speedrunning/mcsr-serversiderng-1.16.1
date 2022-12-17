@@ -26,10 +26,10 @@ public abstract class ProjectileEntityMixin {
      * Obtains the {@link ProjectileEntityMixin#serverSideRNG_divergence} {@code Float}, so it can later be used in {@link ProjectileEntityMixin#modifyArrowRandom(Vec3d, double, double, double)} method.
      * @author Void_X_Walker
      */
-    @Inject(method = "setVelocity",at = @At("HEAD"))
-    public void getDivergence(double x, double y, double z, float speed, float divergence, CallbackInfo ci){
-        if(RNGSession.inSession()){
-            this.serverSideRNG_divergence=divergence;
+    @Inject(method = "setVelocity", at = @At("HEAD"))
+    public void getDivergence(double x, double y, double z, float speed, float divergence, CallbackInfo ci) {
+        if (RNGSession.inSession()) {
+            serverSideRNG_divergence = divergence;
         }
     }
     /**
@@ -37,12 +37,18 @@ public abstract class ProjectileEntityMixin {
      * @see RNGHandler#getRngValue(RNGHandler.RNGTypes)
      * @author Void_X_Walker
      */
-    @Redirect(method = "setVelocity",at = @At(value = "INVOKE",target = "Lnet/minecraft/util/math/Vec3d;add(DDD)Lnet/minecraft/util/math/Vec3d;"))
-    public Vec3d modifyArrowRandom(Vec3d instance, double x, double y, double z){
-        if(RNGSession.inSession()){
-            if(this.getOwner() instanceof PlayerEntity){
-                Random random=new Random(RNGSession.getInstance().getCurrentRNGHandler().getRngValue(RNGHandler.RNGTypes.PROJECTILE));
-                instance.add(random.nextGaussian() * 0.007499999832361937D * (double)serverSideRNG_divergence, random.nextGaussian() * 0.007499999832361937D * (double)serverSideRNG_divergence, random.nextGaussian() * 0.007499999832361937D * (double)serverSideRNG_divergence);
+    @Redirect(method = "setVelocity", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/math/Vec3d;add(DDD)Lnet/minecraft/util/math/Vec3d;"))
+    public Vec3d modifyArrowRandom(Vec3d instance, double x, double y, double z) {
+        if (RNGSession.inSession()) {
+            if (this.getOwner() instanceof PlayerEntity) {
+                Random random = new Random(
+                        RNGSession.getInstance().getCurrentRNGHandler().getRngValue(RNGHandler.RNGTypes.PROJECTILE)
+                );
+                instance.add(
+                        random.nextGaussian() * 0.007499999832361937D * (double) serverSideRNG_divergence,
+                        random.nextGaussian() * 0.007499999832361937D * (double) serverSideRNG_divergence,
+                        random.nextGaussian() * 0.007499999832361937D * (double) serverSideRNG_divergence
+                );
                 return instance;
             }
         }

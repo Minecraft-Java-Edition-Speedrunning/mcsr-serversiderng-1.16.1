@@ -16,7 +16,8 @@ public class GeneratorOptionsMixin {
      * @see RNGSession#startRNGSession()
      */
     @Inject(method = "withHardcore",at = @At("HEAD"))
-    public void startRun(boolean hardcore, OptionalLong seed, CallbackInfoReturnable<GeneratorOptions> cir){
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+    public void startRun(boolean hardcore, OptionalLong seed, CallbackInfoReturnable<GeneratorOptions> cir) {
         RNGSession.startRNGSession();
     }
 }

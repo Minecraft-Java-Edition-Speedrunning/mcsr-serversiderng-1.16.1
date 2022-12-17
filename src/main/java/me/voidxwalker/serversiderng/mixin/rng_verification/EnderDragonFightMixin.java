@@ -14,7 +14,12 @@ public class EnderDragonFightMixin {
      * @see RNGHandler#getRngValue(RNGHandler.RNGTypes)
      * @author Void_X_Walker
      */
-    @ModifyArg(method = "createDragon", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/boss/dragon/EnderDragonEntity;refreshPositionAndAngles(DDDFF)V"),index = 3)
+    @ModifyArg(
+            method = "createDragon",
+            at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/entity/boss/dragon/EnderDragonEntity;refreshPositionAndAngles(DDDFF)V"),
+            index = 3
+    )
     private float modifyDragonAngle(float originalRotation) {
         if (RNGSession.inSession()) {
             return RNGSession.getInstance().getCurrentRNGHandler().getRngValue(RNGHandler.RNGTypes.ENDER_DRAGON_ROTATION) % 360;

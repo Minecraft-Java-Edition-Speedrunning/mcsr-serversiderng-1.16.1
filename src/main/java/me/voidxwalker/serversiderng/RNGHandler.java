@@ -6,8 +6,8 @@ import java.util.Map;
 import java.util.Random;
 
 public class RNGHandler {
-    private final long USE_TIME=40000000000L; //40 seconds
-    private final long EXTRA_TIME=10000000000L; //10 seconds
+    private final long USE_TIME = 40000000000L; //40 seconds
+    private final long EXTRA_TIME = 10000000000L; //10 seconds
     private final Map<RNGTypes, Random> randomMap;
     private long startTime;
     /**
@@ -18,10 +18,10 @@ public class RNGHandler {
      * @author Void_X_Walker
      */
     protected RNGHandler(long seed) {
-        this.randomMap =new LinkedHashMap<>();
+        randomMap = new LinkedHashMap<>();
         Random randomMapRandom = new Random(seed);
-        for(RNGTypes type: RNGTypes.values()){
-            this.randomMap.put(type,new Random(randomMapRandom.nextLong()));
+        for (RNGTypes type: RNGTypes.values()) {
+            randomMap.put(type,new Random(randomMapRandom.nextLong()));
         }
 
     }
@@ -34,7 +34,7 @@ public class RNGHandler {
      * @see ServerSideRNG#getGetRandomToken(long)
      * @author Void_X_Walker
      */
-    public static RNGHandler createRNGHandlerOrNull(long runId){
+    public static RNGHandler createRNGHandlerOrNull(long runId) {
         try {
             return new RNGHandler(new Random(ServerSideRNG.getGetRandomToken(runId).get("random").getAsLong()).nextLong());
         } catch (IOException | NullPointerException e) {
@@ -51,39 +51,39 @@ public class RNGHandler {
      * @author Void_X_Walker
      */
     public long getRngValue(RNGTypes type) {
-        if(this.outOfNormalTime() ){
-            if(this.outOfExtraTime()){
-                ServerSideRNG.LOGGER.warn("RNGHandler called for type "+type.name()+" is in extra time!");
+        if (outOfNormalTime()) {
+            if (outOfExtraTime()) {
+                ServerSideRNG.LOGGER.warn("RNGHandler called for type " + type.name() + " is in extra time!");
             }
             else{
-                ServerSideRNG.LOGGER.warn("RNGHandler called for type "+type.name()+" outside time!");
+                ServerSideRNG.LOGGER.warn("RNGHandler called for type " + type.name() + " outside time!");
             }
         }
-        ServerSideRNG.LOGGER.info("["+ RNGSession.getInstance().runId+"] Getting Random for "+type);
+        ServerSideRNG.LOGGER.info("[" + RNGSession.getInstance().runId + "] Getting Random for " + type);
         return randomMap.get(type).nextLong();
     }
     /**
      * Activates the {@link RNGHandler} by setting the {@link RNGHandler#startTime} to the current {@code System Time}
      * @author Void_X_Walker
      */
-    public void activate(){
-        this.startTime=System.nanoTime();
+    public void activate() {
+        startTime = System.nanoTime();
     }
     /**
      * Returns whether the {@link RNGHandler} has passed its standard {@link RNGHandler#USE_TIME}
      * @return {@code true} if the current {@link System#nanoTime()} minus the {@link RNGHandler#startTime} is bigger than the {@link RNGHandler#USE_TIME}
      * @author Void_X_Walker
      */
-    public boolean outOfNormalTime(){
-        return System.nanoTime()-this.startTime>USE_TIME;
+    public boolean outOfNormalTime() {
+        return System.nanoTime() - startTime > USE_TIME;
     }
     /**
      * Returns whether the {@link RNGHandler} has passed its {@link RNGHandler#EXTRA_TIME}
      * @return {@code true} if the current {@link System#nanoTime()} minus the {@link RNGHandler#startTime} is bigger than the {@link RNGHandler#USE_TIME} + the {@link RNGHandler#EXTRA_TIME}
      * @author Void_X_Walker
      */
-    public boolean outOfExtraTime(){
-        return System.nanoTime()-this.startTime<USE_TIME + EXTRA_TIME;
+    public boolean outOfExtraTime() {
+        return System.nanoTime() - startTime < USE_TIME + EXTRA_TIME;
     }
     /**
      * The Random Generators that get replaced with Generators on the {@code Verification-Server}

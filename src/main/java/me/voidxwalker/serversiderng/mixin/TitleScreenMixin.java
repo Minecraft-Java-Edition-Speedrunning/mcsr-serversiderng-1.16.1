@@ -14,9 +14,9 @@ public class TitleScreenMixin {
      * @see RNGSession#stopRNGSession()
      * @author Void_X_Walker
      */
-    @Inject(method = "init",at = @At("HEAD"))
-    public void endRNGSession(CallbackInfo ci){
-        if(RNGSession.inSession()){
+    @Inject(method = "init", at = @At("HEAD"))
+    public void endRNGSession(CallbackInfo ci) {
+        if (RNGSession.inSession()) {
             RNGSession.stopRNGSession();
         }
     }

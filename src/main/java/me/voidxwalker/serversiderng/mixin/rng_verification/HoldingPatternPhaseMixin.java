@@ -17,10 +17,15 @@ public class HoldingPatternPhaseMixin {
      * @see RNGHandler#getRngValue(RNGHandler.RNGTypes)
      * @author Void_X_Walker
      */
-    @Redirect(method = "method_6841",at = @At(value = "INVOKE",target = "Lnet/minecraft/entity/boss/dragon/EnderDragonEntity;getRandom()Ljava/util/Random;"))
-    public Random modifyDragonLandingPhase(EnderDragonEntity instance){
-        if(RNGSession.inSession()){
-            return new Random(RNGSession.getInstance().getCurrentRNGHandler().getRngValue(RNGHandler.RNGTypes.ENDER_DRAGON_LANDING_APPROACH));
+    @Redirect(method = "method_6841", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/boss/dragon/EnderDragonEntity;getRandom()Ljava/util/Random;"))
+    public Random modifyDragonLandingPhase(EnderDragonEntity instance) {
+        if (RNGSession.inSession()) {
+            return new Random(
+                RNGSession
+                    .getInstance()
+                    .getCurrentRNGHandler()
+                    .getRngValue(RNGHandler.RNGTypes.ENDER_DRAGON_LANDING_APPROACH)
+            );
         }
         return instance.getRandom();
     }
@@ -30,9 +35,14 @@ public class HoldingPatternPhaseMixin {
      * @author Void_X_Walker
      */
     @Redirect(method = "method_6842",at = @At(value = "INVOKE",target = "Lnet/minecraft/entity/boss/dragon/EnderDragonEntity;getRandom()Ljava/util/Random;"))
-    public Random modifyTargetHeight(EnderDragonEntity instance){
-        if(RNGSession.inSession()){
-            return new Random(RNGSession.getInstance().getCurrentRNGHandler().getRngValue(RNGHandler.RNGTypes.ENDER_DRAGON_TARGET_HEIGHT));
+    public Random modifyTargetHeight(EnderDragonEntity instance) {
+        if (RNGSession.inSession()) {
+            return new Random(
+                RNGSession
+                    .getInstance()
+                    .getCurrentRNGHandler()
+                    .getRngValue(RNGHandler.RNGTypes.ENDER_DRAGON_TARGET_HEIGHT)
+            );
         }
         return instance.getRandom();
     }

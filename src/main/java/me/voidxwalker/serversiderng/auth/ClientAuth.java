@@ -41,8 +41,8 @@ public class ClientAuth {
      * @return A {@link ClientAuth} {@code Object} that has been initialized and is ready for requests.
      */
     public static ClientAuth getInstance() {
-        if(ClientAuth.instance ==null){
-            if(ClientAuth.clientAuthCompletableFuture!=null){
+        if (ClientAuth.instance == null) {
+            if (ClientAuth.clientAuthCompletableFuture != null) {
                 try {
                     ClientAuth.instance = clientAuthCompletableFuture.get();
                     return ClientAuth.instance;
@@ -56,10 +56,10 @@ public class ClientAuth {
 
 
     ClientAuth() throws IOException {
-        this.accessToken= MinecraftClient.getInstance().getSession().getAccessToken();
-        this.uuid= MinecraftClient.getInstance().getSession().getProfile().getId();
-        this.proxy= ((YggdrasilMinecraftSessionService)MinecraftClient.getInstance().getSessionService()).getAuthenticationService().getProxy();
-        this.pair=PlayerKeyPair.fetchKeyPair(readInputStream(postInternal(ClientAuth.constantURL(), new byte[0])));
+        this.accessToken = MinecraftClient.getInstance().getSession().getAccessToken();
+        this.uuid = MinecraftClient.getInstance().getSession().getProfile().getId();
+        this.proxy = ((YggdrasilMinecraftSessionService)MinecraftClient.getInstance().getSessionService()).getAuthenticationService().getProxy();
+        this.pair = PlayerKeyPair.fetchKeyPair(readInputStream(postInternal(ClientAuth.constantURL(), new byte[0])));
     }
 
     public static ClientAuth createClientAuth() {
@@ -77,7 +77,7 @@ public class ClientAuth {
      */
 
     public JsonObject createMessageJson() {
-        try{
+        try {
             long randomLong = new SecureRandom().nextLong();
             byte[] data = sign(this.uuid,randomLong);
             JsonObject output = new JsonObject();
@@ -102,17 +102,19 @@ public class ClientAuth {
         }
     }
 
-    byte[] sign(UUID sender, long randomLong) throws GeneralSecurityException{
+    byte[] sign(UUID sender, long randomLong) throws GeneralSecurityException {
         Signature signature = Signature.getInstance(SIGNATURE_ALGORITHM);
         signature.initSign(pair.privateKey);
-        signature.update((sender.getMostSignificantBits()+"/"+sender.getLeastSignificantBits()).getBytes(StandardCharsets.UTF_8));
+        signature.update(
+            (sender.getMostSignificantBits() + "/" + sender.getLeastSignificantBits())
+                .getBytes(StandardCharsets.UTF_8));
         signature.update(Base64.getEncoder().encode(digest(randomLong)));
         return signature.sign();
     }
     static byte[] digest(long randomLong) {
         try {
             MessageDigest digest = MessageDigest.getInstance(DIGEST_ALGORITHM);
-            digest.update((randomLong+"").getBytes(StandardCharsets.UTF_8));
+            digest.update((randomLong + "").getBytes(StandardCharsets.UTF_8));
             digest.update("70".getBytes(StandardCharsets.UTF_8));
             return digest.digest();
         } catch (NoSuchAlgorithmException ignored) {
