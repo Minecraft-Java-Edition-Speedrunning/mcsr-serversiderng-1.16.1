@@ -18,6 +18,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 @Mixin(Block.class)
 public class BlockMixin {
@@ -43,12 +44,13 @@ public class BlockMixin {
             CallbackInfoReturnable<List<ItemStack>> cir,
             net.minecraft.loot.context.LootContext.Builder builder
     ) {
-        if (RNGSession.getInstance() != null) {
-            if (entity instanceof PlayerEntity) {
-                builder.random(RNGSession.getInstance().getCurrentRNGHandler().getRngValue(RNGTypes.BLOCK_DROP));
+        RNGSession.getRngContext(RNGTypes.BLOCK_DROP)
+            .filter((it) -> entity instanceof PlayerEntity)
+            .map(Supplier::get)
+            .ifPresent((random) -> {
+                builder.random(random);
                 cir.setReturnValue( state.getDroppedStacks(builder));
                 cir.cancel();
-            }
-        }
+            });
     }
 }

@@ -25,11 +25,11 @@ public class CreditScreenMixin {
      public void initCreditsScreen(boolean endCredits, Runnable finishAction, CallbackInfo ci) {
          if (endCredits && RNGSession.inSession() && MinecraftClient.getInstance().getServer() != null) {
              File worldFile = MinecraftClient
-                     .getInstance()
-                     .getServer()
-                     .getSavePath(WorldSavePath.ROOT)
-                     .toFile()
-                     .getParentFile();
+                 .getInstance()
+                 .getServer()
+                 .getSavePath(WorldSavePath.ROOT)
+                 .toFile()
+                 .getParentFile();
              CompletableFuture.runAsync(()-> ServerSideRNG.getAndUploadHash(worldFile));
          }
      }

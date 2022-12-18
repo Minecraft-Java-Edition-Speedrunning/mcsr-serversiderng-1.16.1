@@ -4,11 +4,13 @@ import com.google.gson.JsonObject;
 import org.apache.logging.log4j.Level;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
 
 public class RNGSession {
     public static CompletableFuture<RNGSession> rngSessionCompletableFuture;
@@ -57,6 +59,13 @@ public class RNGSession {
     public static RNGSession getInstance() {
         return instance;
     }
+
+    public static Optional<Supplier<Long>> getRngContext(RNGHandler.RNGTypes type) {
+        return Optional.of(getInstance())
+            .map(RNGSession::getCurrentRNGHandler)
+            .map((it)-> () -> it.getRngValue(type));
+    }
+
     /**
      * Starts a new {@link RNGSession}.
      * If a new {@link RNGSession} has already been created async via the {@link RNGSession#rngSessionCompletableFuture} it will be retrieved via the {@link CompletableFuture#get()} method.

@@ -16,6 +16,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
+import java.util.function.Supplier;
+
 @Mixin(LivingEntity.class)
 public abstract class LivingEntityMixin extends Entity {
     public LivingEntityMixin(EntityType<?> type, World world) {
@@ -45,18 +47,16 @@ public abstract class LivingEntityMixin extends Entity {
             LootTable lootTable,
             net.minecraft.loot.context.LootContext.Builder builder
     ) {
-        if (RNGSession.inSession()) {
-            if (causedByPlayer) {
+        RNGSession
+            .getRngContext(RNGHandler.RNGTypes.MOB_DROP)
+            .filter((it) -> causedByPlayer)
+            .map(Supplier::get)
+            .ifPresent((it) -> {
                 lootTable.generateLoot(
-                        builder.random(
-                            RNGSession.getInstance()
-                                .getCurrentRNGHandler()
-                                .getRngValue(RNGHandler.RNGTypes.MOB_DROP)
-                        ).build(LootContextTypes.ENTITY),
-                        this::dropStack
+                    builder.random(it).build(LootContextTypes.ENTITY),
+                    this::dropStack
                 );
                 ci.cancel();
-            }
-        }
+            });
     }
 }

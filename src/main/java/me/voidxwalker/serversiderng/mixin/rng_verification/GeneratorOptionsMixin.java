@@ -14,6 +14,7 @@ import org.spongepowered.asm.mixin.injection.Slice;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.OptionalLong;
+import java.util.function.Supplier;
 
 @Mixin(GeneratorOptions.class)
 public class GeneratorOptionsMixin {
@@ -28,9 +29,9 @@ public class GeneratorOptionsMixin {
     @Inject(method = "withHardcore", at = @At(value = "HEAD"))
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     private void modifySeedRandom(boolean hardcore, OptionalLong seed, CallbackInfoReturnable<GeneratorOptions> cir) {
-        if (RNGSession.inSession()) {
-           this.seed = RNGSession.getInstance().getCurrentRNGHandler().getRngValue(RNGHandler.RNGTypes.WORLD_SEED);
-        }
+        RNGSession.getRngContext(RNGHandler.RNGTypes.WORLD_SEED)
+            .map(Supplier::get)
+            .ifPresent((it) -> this.seed = it);
     }
 
     /**
@@ -56,18 +57,15 @@ public class GeneratorOptionsMixin {
      * @see RNGHandler#getRngValue(RNGHandler.RNGTypes)
      */
     @Redirect(
-            method = "withHardcore",
-            at = @At(value = "INVOKE", target = "Ljava/util/OptionalLong;getAsLong()J", ordinal = 0),
-            slice = @Slice(
-                    from = @At(value = "INVOKE", target = "Ljava/util/OptionalLong;orElse(J)J", shift = At.Shift.AFTER),
-                    to = @At(value = "INVOKE", target = "Lnet/minecraft/world/gen/GeneratorOptions;isDebugWorld()Z", shift = At.Shift.BEFORE)
-            )
+        method = "withHardcore",
+        at = @At(value = "INVOKE", target = "Ljava/util/OptionalLong;getAsLong()J", ordinal = 0),
+        slice = @Slice(
+            from = @At(value = "INVOKE", target = "Ljava/util/OptionalLong;orElse(J)J", shift = At.Shift.AFTER),
+            to = @At(value = "INVOKE", target = "Lnet/minecraft/world/gen/GeneratorOptions;isDebugWorld()Z", shift = At.Shift.BEFORE)
+        )
     )
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     private long ensureSeedConsistency2(OptionalLong instance) {
-        if (RNGSession.inSession() && !instance.isPresent()) {
-            return this.seed;
-        }
-        return instance.getAsLong();
+        return instance.orElse(this.seed);
     }
 }

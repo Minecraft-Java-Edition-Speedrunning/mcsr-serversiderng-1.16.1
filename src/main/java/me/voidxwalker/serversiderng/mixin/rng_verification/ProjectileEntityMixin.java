@@ -16,6 +16,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Random;
+import java.util.function.Supplier;
 
 @Mixin(ProjectileEntity.class)
 public abstract class ProjectileEntityMixin {
@@ -39,19 +40,18 @@ public abstract class ProjectileEntityMixin {
      */
     @Redirect(method = "setVelocity", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/math/Vec3d;add(DDD)Lnet/minecraft/util/math/Vec3d;"))
     public Vec3d modifyArrowRandom(Vec3d instance, double x, double y, double z) {
-        if (RNGSession.inSession()) {
-            if (this.getOwner() instanceof PlayerEntity) {
-                Random random = new Random(
-                        RNGSession.getInstance().getCurrentRNGHandler().getRngValue(RNGHandler.RNGTypes.PROJECTILE)
-                );
+        return RNGSession.getRngContext(RNGHandler.RNGTypes.PROJECTILE)
+            .filter((it) -> this.getOwner() instanceof PlayerEntity)
+            .map(Supplier::get)
+            .map(Random::new)
+            .map((random) -> {
                 instance.add(
-                        random.nextGaussian() * 0.007499999832361937D * (double) serverSideRNG_divergence,
-                        random.nextGaussian() * 0.007499999832361937D * (double) serverSideRNG_divergence,
-                        random.nextGaussian() * 0.007499999832361937D * (double) serverSideRNG_divergence
+                    random.nextGaussian() * 0.007499999832361937D * (double) serverSideRNG_divergence,
+                    random.nextGaussian() * 0.007499999832361937D * (double) serverSideRNG_divergence,
+                    random.nextGaussian() * 0.007499999832361937D * (double) serverSideRNG_divergence
                 );
                 return instance;
-            }
-        }
-        return instance.add(x,y,z);
+            })
+            .orElse(instance.add(x,y,z));
     }
 }
