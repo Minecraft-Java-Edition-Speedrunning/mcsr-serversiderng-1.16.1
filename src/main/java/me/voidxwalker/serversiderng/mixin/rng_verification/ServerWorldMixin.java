@@ -59,7 +59,7 @@ public abstract class ServerWorldMixin extends World {
         duringThunder = null;
     }
     /**
-     * Predicts how {@link ServerWorld#tick(BooleanSupplier)} will modify the thunder property and sets {@link ServerWorldMixin#duringThunder} accordingly: {@code null} if the thunder won't be verified at all and {@code true} / {@code false} depending on if the thunder modification occurred during thunder.
+     * Predicts how {@link ServerWorld#tick(BooleanSupplier)} will modify the thunder property and sets {@link ServerWorldMixin#serverSideRNG_duringThunder} accordingly: {@code null} if the thunder won't be verified at all and {@code true} / {@code false} depending on if the thunder modification occurred during thunder.
      * @author Void_X_Walker
      */
     @Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/MutableWorldProperties;isRaining()Z"))
