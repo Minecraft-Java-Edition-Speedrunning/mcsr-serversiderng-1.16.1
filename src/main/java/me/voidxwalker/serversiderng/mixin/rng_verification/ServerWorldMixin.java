@@ -27,7 +27,7 @@ public abstract class ServerWorldMixin extends World {
     @Shadow @Final private ServerWorldProperties worldProperties;
 
     @Unique
-    private Boolean duringThunder;
+    private Boolean serverSideRNG_duringThunder;
 
     protected ServerWorldMixin(
             MutableWorldProperties mutableWorldProperties,
@@ -49,11 +49,11 @@ public abstract class ServerWorldMixin extends World {
     @Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/ServerWorldProperties;setRaining(Z)V"))
     public void modifyThunderRandom(CallbackInfo ci) {
         RNGSession.getRngContext(RNGHandler.RNGTypes.THUNDER)
-            .filter((it) -> duringThunder != null)
+            .filter((it) -> serverSideRNG_duringThunder != null)
             .map(Supplier::get)
             .map(Random::new)
             .ifPresent((random -> worldProperties.setThunderTime(
-                duringThunder ? random.nextInt(12000) + 3600
+                serverSideRNG_duringThunder ? random.nextInt(12000) + 3600
                     : random.nextInt(168000) + 12000
             )));
         duringThunder = null;
@@ -65,14 +65,14 @@ public abstract class ServerWorldMixin extends World {
     @Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/MutableWorldProperties;isRaining()Z"))
     public void getRandom(BooleanSupplier shouldKeepTicking, CallbackInfo ci) {
         if (!RNGSession.inSession()) {
-            duringThunder = null;
+            serverSideRNG_duringThunder = null;
             return;
         }
         int i = worldProperties.getClearWeatherTime();
         int j = worldProperties.getThunderTime();
         boolean bl2 = properties.isThundering();
         if (i <= 0 && j <= 0) {
-            duringThunder = bl2;
+            serverSideRNG_duringThunder = bl2;
         }
     }
 }
