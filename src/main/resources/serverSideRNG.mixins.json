@@ -4,6 +4,12 @@
   "package": "me.voidxwalker.serversiderng.mixin",
   "compatibilityLevel": "JAVA_8",
   "mixins": [
+    "CommandManagerMixin",
+    "GeneratorOptionsMixin",
+    "LevelPropertiesMixin",
+    "MinecraftClientMixin",
+    "SeedCommandMixin",
+    "TitleScreenMixin",
     "rng_verification.BlockMixin",
     "rng_verification.EnderDragonFightMixin",
     "rng_verification.FishingBobberEntityMixin",
@@ -13,13 +19,7 @@
     "rng_verification.LivingEntityMixin",
     "rng_verification.PiglinBrainMixin",
     "rng_verification.ProjectileEntityMixin",
-    "rng_verification.ServerWorldMixin",
-    "MinecraftClientMixin",
-    "LevelPropertiesMixin",
-    "TitleScreenMixin",
-    "GeneratorOptionsMixin",
-    "CreditScreenMixin"
-
+    "rng_verification.ServerWorldMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -1,16 +1,28 @@
 package me.voidxwalker.serversiderng;
 
 import com.google.gson.JsonObject;
+import com.mojang.brigadier.CommandDispatcher;
 import me.voidxwalker.serversiderng.auth.ClientAuth;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.server.command.CommandManager;
+import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.text.LiteralText;
+import net.minecraft.util.FileNameUtil;
+import net.minecraft.util.Formatting;
+import net.minecraft.util.WorldSavePath;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 public class ServerSideRNG implements ClientModInitializer {
     final static String BASE_URL = "https://serverside-rng-website-fputsekrmq-uc.a.run.app";
@@ -20,18 +32,69 @@ public class ServerSideRNG implements ClientModInitializer {
     final static String HASH_ALG = "MD5";
     final static String READ_ME_NAME = "readme.txt";
     final static String READ_ME = "Submit the Verification Zip File with the name the world you played your run in alongside your speedrun.com submission.\nMake sure not to alter the ZIP in any way, as that may lead your run becoming unverifiable.\nFor more information read this: https://github.com/VoidXWalker/serverSideRNG/blob/master/README.md.\nIf you have any problems or unanswered questions feel free to open a help thread in the Minecraft Java Edition Speedrunning Discord: https://discord.com/invite/jmdFn3C.";
+    public final static long TIME_OUT_OF_WORLD_BEFORE_AUTOUPLOAD=5000000000L;
     final static File verificationFolder = new File("verification-zips");
 
     public static final Logger LOGGER = LogManager.getLogger("ServerSideRNG");
-
+    public static File lastWorldFile;
+    /**
+     * Adds an event to the {@code onComplete} listener of <a href="https://github.com/RedLime/SpeedRunIGT">SpeedRunIGT</a> that fires at run completion.
+     * It will save the world and upload its Hash after a delay of one second.
+     * @see ServerSideRNG#getAndUploadHash(File)  )
+     * @author Void_X_Walker
+     */
     @Override
     public void onInitializeClient() {
+        try {
+            if(FabricLoader.getInstance().isModLoaded("speedrunigt")){
+                Class.forName("com.redlimerl.speedrunigt.timer.InGameTimer")
+                        .getMethod("onComplete", Consumer.class)
+                        .invoke(null,(Consumer<Object>) o -> new Timer().schedule(new TimerTask() {
+                            @Override
+                            public void run() {
+                                assert MinecraftClient.getInstance().getServer()!=null;
+                                MinecraftClient.getInstance().getServer().getPlayerManager().saveAllPlayerData();
+                                MinecraftClient.getInstance().getServer().save(true, false, false);
+                                CompletableFuture.runAsync(()->{
+                                    ServerSideRNG.getAndUploadHash(MinecraftClient
+                                            .getInstance()
+                                            .getServer()
+                                            .getSavePath(WorldSavePath.ROOT)
+                                            .toFile()
+                                            .getParentFile());
+                                    lastWorldFile=null;
+                                });
+                            }
+                        },1000));
+            }
+        } catch (ClassNotFoundException | NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
+            LOGGER.warn("Failed to connect to TimerMod interface: ");
+            e.printStackTrace();
+        }
         CompletableFuture.runAsync(IOUtils::prepareVerificationFolder);
         ClientAuth.clientAuthCompletableFuture = CompletableFuture.supplyAsync(ClientAuth::createClientAuth);
         RNGSession.rngSessionCompletableFuture = CompletableFuture.supplyAsync(RNGSession::createRNGSessionOrNull);
     }
-
-
+    /**
+     * Registers the command {@code serversiderng_uploadRun} that will save the world and upload it's hash via the {@link ServerSideRNG#getAndUploadHash(File)} method.
+     * @see ServerSideRNG#getAndUploadHash(File)  )
+     * @author Void_X_Walker
+     */
+    public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
+        dispatcher.register( CommandManager.literal("serversiderng_uploadRun").executes(context -> {
+            assert MinecraftClient.getInstance().getServer()!=null;
+            MinecraftClient.getInstance().getServer().getPlayerManager().saveAllPlayerData();
+            MinecraftClient.getInstance().getServer().save(true, false, false);
+            getAndUploadHash(MinecraftClient
+                    .getInstance()
+                    .getServer()
+                    .getSavePath(WorldSavePath.ROOT)
+                    .toFile()
+                    .getParentFile());
+            context.getSource().sendFeedback(new LiteralText("Successfully uploaded the Run!").styled(style -> style.withColor(Formatting.GREEN)),false);
+            return 1;
+        }));
+    }
     /**
      * Packs the current world folder and the latest.log file into a {@code ZIP} file named "verification-[worldFileName].zip" in the {@link ServerSideRNG#verificationFolder} using  {@link IOUtils#packZipFile(String, String, String)}
      * It then converts the {@code ZIP-File} into a {@code Hash} using {@link IOUtils#zipToHash(File)}
@@ -45,8 +108,7 @@ public class ServerSideRNG implements ClientModInitializer {
         try {
             File logsFile = new File(MinecraftClient.getInstance().runDirectory,"logs/latest.log");
             File zipFile =  new File(
-                ServerSideRNG.verificationFolder,
-                "verification-" + worldFile.getName()+".zip"
+                ServerSideRNG.verificationFolder,FileNameUtil.getNextUniqueName(ServerSideRNG.verificationFolder.toPath(),"verification-" + worldFile.getName(),".zip")
             );
             IOUtils.packZipFile(zipFile.getPath(), worldFile.getPath(), logsFile.getPath());
             String hash = IOUtils.zipToHash(zipFile);

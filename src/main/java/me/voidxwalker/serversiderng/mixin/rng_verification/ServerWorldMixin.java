@@ -56,7 +56,7 @@ public abstract class ServerWorldMixin extends World {
                 serverSideRNG_duringThunder ? random.nextInt(12000) + 3600
                     : random.nextInt(168000) + 12000
             )));
-        duringThunder = null;
+        serverSideRNG_duringThunder = null;
     }
     /**
      * Predicts how {@link ServerWorld#tick(BooleanSupplier)} will modify the thunder property and sets {@link ServerWorldMixin#serverSideRNG_duringThunder} accordingly: {@code null} if the thunder won't be verified at all and {@code true} / {@code false} depending on if the thunder modification occurred during thunder.

@@ -13,8 +13,11 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
 public class RNGSession {
+    static long GRACE_PERIOD=3000000000L;
     public static CompletableFuture<RNGSession> rngSessionCompletableFuture;
     public static RNGSession instance;
+    private SessionState sessionState;
+    private long worldJoinTime;
     public long runId;
     /**
      * A backup {@code RandomGenerator} that gets called if no new {@link RNGHandler} is available due to e.g. a connection issue
@@ -32,6 +35,7 @@ public class RNGSession {
      */
     RNGSession(JsonObject startRunToken) {
         runId = startRunToken.get("runId").getAsLong();
+        sessionState=SessionState.STARTUP;
         Random random = new Random(startRunToken.get("random").getAsLong());
 
         currentRNGHandler = new RNGHandler(random.nextLong());
@@ -48,6 +52,7 @@ public class RNGSession {
      */
     public RNGSession(long runId) {
         this.runId = runId;
+        sessionState=SessionState.STARTUP;
         currentRNGHandler = null;
         rngHandlerCompletableFuture = CompletableFuture.supplyAsync(()-> RNGHandler.createRNGHandlerOrNull(runId));
         backupRandom = null;
@@ -106,7 +111,7 @@ public class RNGSession {
      * @author Void_X_Walker
      */
     public static boolean inSession() {
-        return instance != null && instance.getCurrentRNGHandler() != null;
+        return instance != null && instance.currentRNGHandler != null;
     }
     /**
      * Creates a new {@link RNGSession} using the {@code StartRun} token obtained from the {@code Verification-Server}.
@@ -159,6 +164,34 @@ public class RNGSession {
             }
         }
     }
+    public void setPaused(boolean paused){
+        ServerSideRNG.LOGGER.log(Level.INFO,(paused?"Paused ":"Unpaused ")+"the RNGHandler.");
+        sessionState=paused?SessionState.PAUSED:SessionState.RUNNING;
+    }
+    public boolean isPaused(){
+        return sessionState==SessionState.PAUSED;
+    }
+    public boolean inStartup(){
+        return sessionState==SessionState.STARTUP;
+    }
+    public void joinWorld(){
+        worldJoinTime=worldJoinTime==0? System.nanoTime():worldJoinTime;
+    }
+    boolean canBePaused(){
+        return inStartup()&&updateSessionState();
+    }
+    public void tryToPause(){
+        if(canBePaused()){
+            setPaused(true);
+        }
+    }
+    boolean updateSessionState(){
+        if(System.nanoTime()-worldJoinTime >GRACE_PERIOD){
+            sessionState=SessionState.RUNNING;
+            return false;
+        }
+        return true;
+    }
     /**
      * Tries to update the {@link RNGSession#currentRNGHandler} with the {@link RNGHandler} created by the {@link RNGSession#rngHandlerCompletableFuture} and then activates it.
      * <p>
@@ -186,5 +219,17 @@ public class RNGSession {
             }
         }
         rngHandlerCompletableFuture = CompletableFuture.supplyAsync(()-> RNGHandler.createRNGHandlerOrNull(runId));
+    }
+    /**
+     * STARTUP = World creation
+     * <p>
+     * PAUSED = Paused the game in the first 2 seconds after joining
+     * <p>
+     * RUNNING = 2 seconds after join or after the first pause,whichever is first
+     **/
+    enum SessionState{
+        STARTUP,
+        PAUSED,
+        RUNNING
     }
 }
