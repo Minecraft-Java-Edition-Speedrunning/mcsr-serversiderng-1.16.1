@@ -6,8 +6,6 @@ import java.util.Map;
 import java.util.Random;
 
 public class RNGHandler {
-    private final long USE_TIME = 40000000000L; //40 seconds
-    private final long EXTRA_TIME = 10000000000L; //10 seconds
     private final Map<RNGTypes, Random> randomMap;
     private long startTime;
     /**
@@ -70,20 +68,20 @@ public class RNGHandler {
         startTime = System.nanoTime();
     }
     /**
-     * Returns whether the {@link RNGHandler} has passed its standard {@link RNGHandler#USE_TIME}
-     * @return {@code true} if the current {@link System#nanoTime()} minus the {@link RNGHandler#startTime} is bigger than the {@link RNGHandler#USE_TIME}
+     * Returns whether the {@link RNGHandler} has passed its standard {@link ServerSideRNGConfig#USE_TIME}
+     * @return {@code true} if the current {@link System#nanoTime()} minus the {@link RNGHandler#startTime} is bigger than the {@link ServerSideRNGConfig#USE_TIME}
      * @author Void_X_Walker
      */
     public boolean outOfNormalTime() {
-        return System.nanoTime() - startTime > USE_TIME;
+        return System.nanoTime() - startTime > ServerSideRNGConfig.USE_TIME;
     }
     /**
-     * Returns whether the {@link RNGHandler} has passed its {@link RNGHandler#EXTRA_TIME}
-     * @return {@code true} if the current {@link System#nanoTime()} minus the {@link RNGHandler#startTime} is bigger than the {@link RNGHandler#USE_TIME} + the {@link RNGHandler#EXTRA_TIME}
+     * Returns whether the {@link RNGHandler} has passed its {@link ServerSideRNGConfig#EXTRA_TIME}
+     * @return {@code true} if the current {@link System#nanoTime()} minus the {@link RNGHandler#startTime} is bigger than the {@link ServerSideRNGConfig#USE_TIME} + the {@link ServerSideRNGConfig#EXTRA_TIME}
      * @author Void_X_Walker
      */
     public boolean outOfExtraTime() {
-        return System.nanoTime() - startTime < USE_TIME + EXTRA_TIME;
+        return System.nanoTime() - startTime < ServerSideRNGConfig.USE_TIME + ServerSideRNGConfig.EXTRA_TIME;
     }
     /**
      * The Random Generators that get replaced with Generators on the {@code Verification-Server}

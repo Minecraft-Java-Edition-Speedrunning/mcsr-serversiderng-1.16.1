@@ -13,7 +13,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
 public class RNGSession {
-    static long GRACE_PERIOD=3000000000L;
     public static CompletableFuture<RNGSession> rngSessionCompletableFuture;
     public static RNGSession instance;
     private SessionState sessionState;
@@ -93,7 +92,7 @@ public class RNGSession {
             ServerSideRNG.LOGGER.warn("Started RNGSession sync!");
         }
         if (instance != null) {
-            ServerSideRNG.LOGGER.log(Level.INFO, "Started RNGSession for runID = " + instance.runId);
+            ServerSideRNG.log(Level.INFO, "Started RNGSession for runID = " + instance.runId);
         }
         rngSessionCompletableFuture = CompletableFuture.supplyAsync(RNGSession::createRNGSessionOrNull);
     }
@@ -165,7 +164,7 @@ public class RNGSession {
         }
     }
     public void setPaused(boolean paused){
-        ServerSideRNG.LOGGER.log(Level.INFO,(paused?"Paused ":"Unpaused ")+"the RNGHandler.");
+        ServerSideRNG.log(Level.INFO,(paused?"Paused ":"Unpaused ")+"the RNGHandler.");
         sessionState=paused?SessionState.PAUSED:SessionState.RUNNING;
     }
     public boolean isPaused(){
@@ -186,7 +185,7 @@ public class RNGSession {
         }
     }
     boolean updateSessionState(){
-        if(System.nanoTime()-worldJoinTime >GRACE_PERIOD){
+        if(System.nanoTime()-worldJoinTime > ServerSideRNGConfig.GRACE_PERIOD){
             sessionState=SessionState.RUNNING;
             return false;
         }

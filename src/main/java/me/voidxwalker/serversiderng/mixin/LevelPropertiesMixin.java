@@ -12,6 +12,7 @@ import net.minecraft.world.gen.GeneratorOptions;
 import net.minecraft.world.level.LevelInfo;
 import net.minecraft.world.level.LevelProperties;
 import net.minecraft.world.level.storage.SaveVersionInfo;
+import org.apache.logging.log4j.Level;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -55,14 +56,14 @@ public class LevelPropertiesMixin {
             Lifecycle lifecycle,
             CallbackInfoReturnable<LevelProperties> cir
     ) {
-        if (dynamic.get("server-side-rng-runId").result().isPresent()) {
-            Optional<Number> optional = dynamic.get("server-side-rng-runId").asNumber().result();
+        if (dynamic.get("serversiderng-runid").result().isPresent()) {
+            Optional<Number> optional = dynamic.get("serversiderng-runid").asNumber().result();
             if (optional.isPresent()) {
                 RNGSession.instance = new RNGSession(optional.get().longValue());
-                ServerSideRNG.LOGGER.info("Successfully loaded RunID from file!");
+                ServerSideRNG.log(Level.INFO,"Successfully loaded RunID from file!");
             }
             else {
-                ServerSideRNG.LOGGER.warn("Failed to load RunID from file!");
+                ServerSideRNG.log(Level.INFO,"Failed to load RunID from file!");
             }
         }
     }

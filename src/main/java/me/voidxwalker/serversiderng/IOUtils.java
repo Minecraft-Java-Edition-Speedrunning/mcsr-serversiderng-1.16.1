@@ -14,6 +14,7 @@ import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.Properties;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -77,15 +78,15 @@ public class IOUtils {
      */
     static void prepareVerificationFolder() {
         if (ServerSideRNG.verificationFolder.mkdir()) {
-            File readMe = new File(ServerSideRNG.verificationFolder, ServerSideRNG.READ_ME_NAME);
+            File readMe = new File(ServerSideRNG.verificationFolder, ServerSideRNGConfig.READ_ME_NAME);
             try {
                 if (readMe.createNewFile()) {
                     try (FileWriter writer = new FileWriter(readMe)) {
-                        writer.write(ServerSideRNG.READ_ME);
+                        writer.write(ServerSideRNGConfig.READ_ME);
                     }
                 }
             } catch (IOException e) {
-                ServerSideRNG.LOGGER.log(Level.WARN,"Failed to create Verification Folder: ");
+                ServerSideRNG.log(Level.WARN,"Failed to create Verification Folder: ");
                 e.printStackTrace();
             }
         }

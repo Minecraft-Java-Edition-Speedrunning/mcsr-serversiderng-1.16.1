@@ -2,6 +2,7 @@ package me.voidxwalker.serversiderng.mixin;
 
 import me.voidxwalker.serversiderng.RNGSession;
 import me.voidxwalker.serversiderng.ServerSideRNG;
+import me.voidxwalker.serversiderng.ServerSideRNGConfig;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.GameMenuScreen;
 import net.minecraft.client.gui.screen.Screen;
@@ -32,10 +33,12 @@ public class MinecraftClientMixin {
      */
     @Inject(method = "render",at = @At("HEAD"))
     public void trackLastInWorld(CallbackInfo ci){
-        serverSideRNG_lastInWorld=this.server!=null?System.nanoTime(): serverSideRNG_lastInWorld;
-        if(ServerSideRNG.lastWorldFile!=null&& System.nanoTime()-serverSideRNG_lastInWorld>ServerSideRNG.TIME_OUT_OF_WORLD_BEFORE_AUTOUPLOAD){
-            ServerSideRNG.getAndUploadHash(ServerSideRNG.lastWorldFile);
-            ServerSideRNG.lastWorldFile=null;
+        if(ServerSideRNGConfig.UPLOAD_ON_WORLD_LEAVE){
+            serverSideRNG_lastInWorld=this.server!=null?System.nanoTime(): serverSideRNG_lastInWorld;
+            if(ServerSideRNG.lastWorldFile!=null&& System.nanoTime()-serverSideRNG_lastInWorld> ServerSideRNGConfig.TIME_OUT_OF_WORLD_BEFORE_AUTOUPLOAD){
+                ServerSideRNG.getAndUploadHash(ServerSideRNG.lastWorldFile);
+                ServerSideRNG.lastWorldFile=null;
+            }
         }
     }
     /**

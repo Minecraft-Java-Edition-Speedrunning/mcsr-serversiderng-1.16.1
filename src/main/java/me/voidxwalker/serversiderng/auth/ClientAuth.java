@@ -66,7 +66,7 @@ public class ClientAuth {
         try {
             return new ClientAuth();
         } catch (Exception e) {
-            ServerSideRNG.LOGGER.warn("Failed to create Authentication: ");
+            ServerSideRNG.log(Level.WARN,"Failed to create Authentication: ");
             e.printStackTrace();
             return null;
         }
@@ -89,7 +89,7 @@ public class ClientAuth {
             output.addProperty("data",Base64.getEncoder().encodeToString(data));
             return output;
         } catch (Exception e) {
-            ServerSideRNG.LOGGER.log(Level.WARN,"Failed to sign authentication message JSON: ");
+            ServerSideRNG.log(Level.WARN,"Failed to sign authentication message JSON: ");
             e.printStackTrace();
             return null;
         }
@@ -123,7 +123,6 @@ public class ClientAuth {
     }
 
     PlayerKeyPair.KeyPairResponse readInputStream(final HttpURLConnection connection) throws IOException {
-
         InputStream inputStream = null;
         try {
             final int status = connection.getResponseCode();

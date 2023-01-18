@@ -25,17 +25,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 public class ServerSideRNG implements ClientModInitializer {
-    final static String BASE_URL = "https://serverside-rng-website-fputsekrmq-uc.a.run.app";
-    final static String START_RUN_URL = BASE_URL + "/startRun";
-    final static String GET_RANDOM_URL = BASE_URL + "/getRandom";
-    final static String UPLOAD_HASH_URL = BASE_URL + "/uploadHash";
     final static String HASH_ALG = "MD5";
-    final static String READ_ME_NAME = "readme.txt";
-    final static String READ_ME = "Submit the Verification Zip File with the name the world you played your run in alongside your speedrun.com submission.\nMake sure not to alter the ZIP in any way, as that may lead your run becoming unverifiable.\nFor more information read this: https://github.com/VoidXWalker/serverSideRNG/blob/master/README.md.\nIf you have any problems or unanswered questions feel free to open a help thread in the Minecraft Java Edition Speedrunning Discord: https://discord.com/invite/jmdFn3C.";
-    public final static long TIME_OUT_OF_WORLD_BEFORE_AUTOUPLOAD=5000000000L;
     final static File verificationFolder = new File("verification-zips");
 
-    public static final Logger LOGGER = LogManager.getLogger("ServerSideRNG");
+    static final Logger LOGGER = LogManager.getLogger("ServerSideRNG");
     public static File lastWorldFile;
     /**
      * Adds an event to the {@code onComplete} listener of <a href="https://github.com/RedLime/SpeedRunIGT">SpeedRunIGT</a> that fires at run completion.
@@ -45,6 +38,7 @@ public class ServerSideRNG implements ClientModInitializer {
      */
     @Override
     public void onInitializeClient() {
+        ServerSideRNGConfig.init();
         try {
             if(FabricLoader.getInstance().isModLoaded("speedrunigt")){
                 Class.forName("com.redlimerl.speedrunigt.timer.InGameTimer")
@@ -52,18 +46,26 @@ public class ServerSideRNG implements ClientModInitializer {
                         .invoke(null,(Consumer<Object>) o -> new Timer().schedule(new TimerTask() {
                             @Override
                             public void run() {
-                                assert MinecraftClient.getInstance().getServer()!=null;
-                                MinecraftClient.getInstance().getServer().getPlayerManager().saveAllPlayerData();
-                                MinecraftClient.getInstance().getServer().save(true, false, false);
-                                CompletableFuture.runAsync(()->{
-                                    ServerSideRNG.getAndUploadHash(MinecraftClient
-                                            .getInstance()
-                                            .getServer()
-                                            .getSavePath(WorldSavePath.ROOT)
-                                            .toFile()
-                                            .getParentFile());
-                                    lastWorldFile=null;
-                                });
+                                if(RNGSession.inSession()){
+                                    assert MinecraftClient.getInstance().getServer()!=null;
+                                    MinecraftClient.getInstance().getServer().getPlayerManager().saveAllPlayerData();
+                                    MinecraftClient.getInstance().getServer().save(true, false, false);
+                                    CompletableFuture.runAsync(()->{
+                                        ServerSideRNG.getAndUploadHash(MinecraftClient
+                                                .getInstance()
+                                                .getServer()
+                                                .getSavePath(WorldSavePath.ROOT)
+                                                .toFile()
+                                                .getParentFile());
+                                        MinecraftClient
+                                                .getInstance()
+                                                .getServer()
+                                                .getCommandSource()
+                                                .sendFeedback(new LiteralText("Successfully uploaded the Run!")
+                                                        .styled(style -> style.withColor(Formatting.GREEN)),false);
+                                        lastWorldFile=null;
+                                    });
+                                }
                             }
                         },1000));
             }
@@ -75,6 +77,9 @@ public class ServerSideRNG implements ClientModInitializer {
         ClientAuth.clientAuthCompletableFuture = CompletableFuture.supplyAsync(ClientAuth::createClientAuth);
         RNGSession.rngSessionCompletableFuture = CompletableFuture.supplyAsync(RNGSession::createRNGSessionOrNull);
     }
+    public static void log(Level level,String message){
+        LOGGER.log(level,message);
+    }
     /**
      * Registers the command {@code serversiderng_uploadRun} that will save the world and upload it's hash via the {@link ServerSideRNG#getAndUploadHash(File)} method.
      * @see ServerSideRNG#getAndUploadHash(File)  )
@@ -82,16 +87,19 @@ public class ServerSideRNG implements ClientModInitializer {
      */
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         dispatcher.register( CommandManager.literal("serversiderng_uploadRun").executes(context -> {
-            assert MinecraftClient.getInstance().getServer()!=null;
-            MinecraftClient.getInstance().getServer().getPlayerManager().saveAllPlayerData();
-            MinecraftClient.getInstance().getServer().save(true, false, false);
-            getAndUploadHash(MinecraftClient
-                    .getInstance()
-                    .getServer()
-                    .getSavePath(WorldSavePath.ROOT)
-                    .toFile()
-                    .getParentFile());
-            context.getSource().sendFeedback(new LiteralText("Successfully uploaded the Run!").styled(style -> style.withColor(Formatting.GREEN)),false);
+            if(RNGSession.inSession()){
+                assert MinecraftClient.getInstance().getServer()!=null;
+                MinecraftClient.getInstance().getServer().getPlayerManager().saveAllPlayerData();
+                MinecraftClient.getInstance().getServer().save(true, false, false);
+                getAndUploadHash(MinecraftClient
+                        .getInstance()
+                        .getServer()
+                        .getSavePath(WorldSavePath.ROOT)
+                        .toFile()
+                        .getParentFile());
+                context.getSource().sendFeedback(new LiteralText("Successfully uploaded the Run!").styled(style -> style.withColor(Formatting.GREEN)),false);
+
+            }
             return 1;
         }));
     }
@@ -113,14 +121,14 @@ public class ServerSideRNG implements ClientModInitializer {
             IOUtils.packZipFile(zipFile.getPath(), worldFile.getPath(), logsFile.getPath());
             String hash = IOUtils.zipToHash(zipFile);
             ServerSideRNG.uploadHashToken(RNGSession.getInstance().runId, hash);
-            LOGGER.log(Level.INFO, "Successfully uploaded File Hash!");
+            ServerSideRNG.log(Level.INFO, "Successfully uploaded File Hash!");
         } catch (Exception e) {
-            LOGGER.log(Level.WARN, "Failed to uploaded File Hash: ");
+            ServerSideRNG.log(Level.WARN, "Failed to uploaded File Hash: ");
             e.printStackTrace();
         }
     }
     /**
-     * Sends a {@code startRunRequest} to the {@code Verification-Server} via the {@link ServerSideRNG#START_RUN_URL},
+     * Sends a {@code startRunRequest} to the {@code Verification-Server} via the {@link ServerSideRNGConfig#START_RUN_URL},
      * and returns a {@link JsonObject} containing the {@code runId} of the session and the {@code random}.
      * Automatically grabs the {@code UUID} of the current {@link com.mojang.authlib.GameProfile} for the upload.
      * This method should be called asynchronous due to the delay associated with the request.
@@ -128,17 +136,17 @@ public class ServerSideRNG implements ClientModInitializer {
      * and the {@code random} as the {@code Long} value for the {@code "random"} property
      * @throws IOException: If an error occurred when making the request
      * @see  IOUtils#makeRequest(JsonObject, String)
-     * @see ServerSideRNG#START_RUN_URL
+     * @see ServerSideRNGConfig#START_RUN_URL
      * @author Void_X_Walker
      */
     static JsonObject getStartRunToken() throws IOException {
         JsonObject json = new JsonObject();
         json.add("auth", ClientAuth.getInstance().createMessageJson());
         json.addProperty("uuid", ClientAuth.getInstance().uuid.toString());
-        return IOUtils.makeRequest(json, START_RUN_URL);
+        return IOUtils.makeRequest(json, ServerSideRNGConfig.START_RUN_URL);
     }
     /**
-     * Sends a {@code getRandomRequest} with the {@code runId} to the {@code Verification-Server} via the {@link ServerSideRNG#GET_RANDOM_URL},
+     * Sends a {@code getRandomRequest} with the {@code runId} to the {@code Verification-Server} via the {@link ServerSideRNGConfig#GET_RANDOM_URL},
      * and returns a {@link JsonObject} containing the {@code random}.
      * Automatically grabs the {@code UUID} of the current {@link com.mojang.authlib.GameProfile} for the upload.
      * This method should be called asynchronous due to the delay associated with the request.
@@ -146,7 +154,7 @@ public class ServerSideRNG implements ClientModInitializer {
      * @return a {@link JsonObject} with the {@code random} as the {@code Long} value for the {@code "random"} property
      * @throws IOException: If an error occurred when making the request
      * @see  IOUtils#makeRequest(JsonObject, String)
-     * @see ServerSideRNG#GET_RANDOM_URL
+     * @see ServerSideRNGConfig#GET_RANDOM_URL
      * @author Void_X_Walker
      */
     static JsonObject getGetRandomToken(long runId) throws IOException {
@@ -154,17 +162,17 @@ public class ServerSideRNG implements ClientModInitializer {
         json.add("auth", ClientAuth.getInstance().createMessageJson());
         json.addProperty("uuid", ClientAuth.getInstance().uuid.toString());
         json.addProperty("runId", runId);
-        return IOUtils.makeRequest(json, ServerSideRNG.GET_RANDOM_URL);
+        return IOUtils.makeRequest(json, ServerSideRNGConfig.GET_RANDOM_URL);
     }
     /**
-     * Uploads a {@code Hash} together with the {@code runId} to the {@code Verification-Server} via the {@link ServerSideRNG#UPLOAD_HASH_URL}.
+     * Uploads a {@code Hash} together with the {@code runId} to the {@code Verification-Server} via the {@link ServerSideRNGConfig#UPLOAD_HASH_URL}.
      * Automatically grabs the {@code UUID} of the current {@link com.mojang.authlib.GameProfile} for the upload.
      * This method should be called asynchronous due to the delay associated with the request.
      * @param runId the {@code Long} {@code runId} for the {@link RNGSession} associated with the {code Hash}.
      * @param hash the {@code Hash} that should be uploaded to the {@code Verification-Server}
      * @throws IOException: If an error occurred when making the request
      * @see  IOUtils#makeRequest(JsonObject, String)
-     * @see ServerSideRNG#UPLOAD_HASH_URL
+     * @see ServerSideRNGConfig#UPLOAD_HASH_URL
      * @author Void_X_Walker
      */
     static void uploadHashToken(long runId, String hash) throws IOException {
@@ -173,6 +181,6 @@ public class ServerSideRNG implements ClientModInitializer {
         json.addProperty("uuid", ClientAuth.getInstance().uuid.toString());
         json.addProperty("hash", hash);
         json.addProperty("runId", runId);
-        IOUtils.makeRequest(json, UPLOAD_HASH_URL);
+        IOUtils.makeRequest(json, ServerSideRNGConfig.UPLOAD_HASH_URL);
     }
 }
