@@ -22,6 +22,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 public class ServerSideRNG implements ClientModInitializer {
@@ -29,6 +30,10 @@ public class ServerSideRNG implements ClientModInitializer {
     final static File verificationFolder = new File("verification-zips");
 
     static final Logger LOGGER = LogManager.getLogger("ServerSideRNG");
+    static AtomicBoolean impendingUpload;
+    public static boolean needsUpload(){
+        return impendingUpload.getAndSet(false);
+    }
     public static File lastWorldFile;
     /**
      * Adds an event to the {@code onComplete} listener of <a href="https://github.com/RedLime/SpeedRunIGT">SpeedRunIGT</a> that fires at run completion.
@@ -47,24 +52,7 @@ public class ServerSideRNG implements ClientModInitializer {
                             @Override
                             public void run() {
                                 if(RNGSession.inSession()){
-                                    assert MinecraftClient.getInstance().getServer()!=null;
-                                    MinecraftClient.getInstance().getServer().getPlayerManager().saveAllPlayerData();
-                                    MinecraftClient.getInstance().getServer().save(true, false, false);
-                                    CompletableFuture.runAsync(()->{
-                                        ServerSideRNG.getAndUploadHash(MinecraftClient
-                                                .getInstance()
-                                                .getServer()
-                                                .getSavePath(WorldSavePath.ROOT)
-                                                .toFile()
-                                                .getParentFile());
-                                        MinecraftClient
-                                                .getInstance()
-                                                .getServer()
-                                                .getCommandSource()
-                                                .sendFeedback(new LiteralText("Successfully uploaded the Run!")
-                                                        .styled(style -> style.withColor(Formatting.GREEN)),false);
-                                        lastWorldFile=null;
-                                    });
+                                   impendingUpload.set(true);
                                 }
                             }
                         },1000));
@@ -82,23 +70,14 @@ public class ServerSideRNG implements ClientModInitializer {
     }
     /**
      * Registers the command {@code serversiderng_uploadRun} that will save the world and upload it's hash via the {@link ServerSideRNG#getAndUploadHash(File)} method.
+     * @param dispatcher the {@link CommandDispatcher} to add the command to
      * @see ServerSideRNG#getAndUploadHash(File)  )
      * @author Void_X_Walker
      */
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         dispatcher.register( CommandManager.literal("serversiderng_uploadRun").executes(context -> {
             if(RNGSession.inSession()){
-                assert MinecraftClient.getInstance().getServer()!=null;
-                MinecraftClient.getInstance().getServer().getPlayerManager().saveAllPlayerData();
-                MinecraftClient.getInstance().getServer().save(true, false, false);
-                getAndUploadHash(MinecraftClient
-                        .getInstance()
-                        .getServer()
-                        .getSavePath(WorldSavePath.ROOT)
-                        .toFile()
-                        .getParentFile());
-                context.getSource().sendFeedback(new LiteralText("Successfully uploaded the Run!").styled(style -> style.withColor(Formatting.GREEN)),false);
-
+                uploadHash(false,true);
             }
             return 1;
         }));
@@ -107,6 +86,8 @@ public class ServerSideRNG implements ClientModInitializer {
      * Packs the current world folder and the latest.log file into a {@code ZIP} file named "verification-[worldFileName].zip" in the {@link ServerSideRNG#verificationFolder} using  {@link IOUtils#packZipFile(String, String, String)}
      * It then converts the {@code ZIP-File} into a {@code Hash} using {@link IOUtils#zipToHash(File)}
      * and sends it to the {@code Verification-Server} using  {@link ServerSideRNG#uploadHashToken(long, String)}
+     * This method should be called asynchronously via {@link ServerSideRNG#uploadHash(boolean, boolean)} if possible.
+     * @param worldFile the file of the world to zip and upload the hash of
      * @see  IOUtils#zipToHash(File)
      * @see IOUtils#packZipFile(String, String, String)
      * @see ServerSideRNG#uploadHashToken(long, String) )
@@ -126,6 +107,33 @@ public class ServerSideRNG implements ClientModInitializer {
             ServerSideRNG.log(Level.WARN, "Failed to uploaded File Hash: ");
             e.printStackTrace();
         }
+    }
+    public static void uploadHash(boolean lastSave,boolean playerFeedback){
+        if( MinecraftClient.getInstance().getServer()!=null){
+            MinecraftClient.getInstance().getServer().getPlayerManager().saveAllPlayerData();
+            MinecraftClient.getInstance().getServer().save(true, false, false);
+        }
+        CompletableFuture.runAsync(()->{
+            ServerSideRNG.getAndUploadHash(MinecraftClient
+                    .getInstance()
+                    .getServer()
+                    .getSavePath(WorldSavePath.ROOT)
+                    .toFile()
+                    .getParentFile());
+            if(MinecraftClient.getInstance().getServer()!=null&&playerFeedback){
+                MinecraftClient
+                        .getInstance()
+                        .getServer()
+                        .getCommandSource()
+                        .sendFeedback(new LiteralText("Successfully uploaded the Run!")
+                                .styled(style -> style.withColor(Formatting.GREEN)
+                                ),false);
+            }
+            if(lastSave){
+                ServerSideRNG.lastWorldFile=null;
+            }
+        });
+
     }
     /**
      * Sends a {@code startRunRequest} to the {@code Verification-Server} via the {@link ServerSideRNGConfig#START_RUN_URL},

@@ -52,13 +52,11 @@ public class ServerSideRNGConfig {
             ServerSideRNG.log(Level.WARN, "Could not save config file:\n" + e.getMessage());
         }
     }
-    static Properties getProperties(File configFile){
+    static Properties getProperties(File configFile) throws IOException{
         try(FileInputStream f= new FileInputStream(configFile)){
             Properties properties = new Properties();
             properties.load(f);
             return properties;
-        } catch (IOException e) {
-            return null;
         }
     }
 }

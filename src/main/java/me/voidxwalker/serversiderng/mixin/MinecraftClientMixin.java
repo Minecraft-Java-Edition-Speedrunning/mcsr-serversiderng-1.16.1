@@ -36,8 +36,7 @@ public class MinecraftClientMixin {
         if(ServerSideRNGConfig.UPLOAD_ON_WORLD_LEAVE){
             serverSideRNG_lastInWorld=this.server!=null?System.nanoTime(): serverSideRNG_lastInWorld;
             if(ServerSideRNG.lastWorldFile!=null&& System.nanoTime()-serverSideRNG_lastInWorld> ServerSideRNGConfig.TIME_OUT_OF_WORLD_BEFORE_AUTOUPLOAD){
-                ServerSideRNG.getAndUploadHash(ServerSideRNG.lastWorldFile);
-                ServerSideRNG.lastWorldFile=null;
+                ServerSideRNG.uploadHash(true,false);
             }
         }
     }

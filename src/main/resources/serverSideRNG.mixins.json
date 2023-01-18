@@ -10,6 +10,7 @@
     "MinecraftClientMixin",
     "SeedCommandMixin",
     "TitleScreenMixin",
+    "MinecraftServerMixin",
     "rng_verification.BlockMixin",
     "rng_verification.EnderDragonFightMixin",
     "rng_verification.FishingBobberEntityMixin",
