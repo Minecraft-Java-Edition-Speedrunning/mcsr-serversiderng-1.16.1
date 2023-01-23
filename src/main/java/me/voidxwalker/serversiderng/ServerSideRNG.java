@@ -15,6 +15,7 @@ import net.minecraft.util.WorldSavePath;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,8 +30,8 @@ public class ServerSideRNG implements ClientModInitializer {
     final static String HASH_ALG = "MD5";
     final static File verificationFolder = new File("verification-zips");
 
-    static final Logger LOGGER = LogManager.getLogger("ServerSideRNG");
-    static AtomicBoolean impendingUpload;
+    private static final Logger LOGGER = LogManager.getLogger("ServerSideRNG");
+    static AtomicBoolean impendingUpload= new AtomicBoolean(false);
     public static boolean needsUpload(){
         return impendingUpload.getAndSet(false);
     }
@@ -58,7 +59,7 @@ public class ServerSideRNG implements ClientModInitializer {
                         },1000));
             }
         } catch (ClassNotFoundException | NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
-            LOGGER.warn("Failed to connect to TimerMod interface: ");
+            ServerSideRNG.log(Level.WARN,"Failed to connect to TimerMod interface: ");
             e.printStackTrace();
         }
         CompletableFuture.runAsync(IOUtils::prepareVerificationFolder);
@@ -102,7 +103,7 @@ public class ServerSideRNG implements ClientModInitializer {
             IOUtils.packZipFile(zipFile.getPath(), worldFile.getPath(), logsFile.getPath());
             String hash = IOUtils.zipToHash(zipFile);
             ServerSideRNG.uploadHashToken(RNGSession.getInstance().runId, hash);
-            ServerSideRNG.log(Level.INFO, "Successfully uploaded File Hash!");
+            RNGSession.getInstance().log(Level.INFO, "Successfully uploaded File Hash!");
         } catch (Exception e) {
             ServerSideRNG.log(Level.WARN, "Failed to uploaded File Hash: ");
             e.printStackTrace();
@@ -133,7 +134,6 @@ public class ServerSideRNG implements ClientModInitializer {
                 ServerSideRNG.lastWorldFile=null;
             }
         });
-
     }
     /**
      * Sends a {@code startRunRequest} to the {@code Verification-Server} via the {@link ServerSideRNGConfig#START_RUN_URL},

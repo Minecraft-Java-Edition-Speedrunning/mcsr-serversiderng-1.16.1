@@ -1,13 +1,23 @@
 package me.voidxwalker.serversiderng;
 
+import net.minecraft.block.Block;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityType;
+import net.minecraft.util.registry.DefaultedRegistry;
+import net.minecraft.util.registry.Registry;
+import net.minecraft.village.VillagerProfession;
+import org.apache.logging.log4j.Level;
+import org.jetbrains.annotations.Nullable;
+
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Random;
 
 public class RNGHandler {
-    private final Map<RNGTypes, Random> randomMap;
+    private final Map<RNGTypes, RNGSupplier> randomMap;
     private long startTime;
+    private int handlerIndex;
     /**
      * Initializes a new {@link RNGHandler} using the provided {@code Long}. Great care is advised when using this constructor.
      * <p>
@@ -17,11 +27,17 @@ public class RNGHandler {
      */
     protected RNGHandler(long seed) {
         randomMap = new LinkedHashMap<>();
-        Random randomMapRandom = new Random(seed);
-        for (RNGTypes type: RNGTypes.values()) {
-            randomMap.put(type,new Random(randomMapRandom.nextLong()));
-        }
+        fillRandomMap(new Random(seed));
+        handlerIndex=-1;
 
+    }
+    private void fillRandomMap(Random randomMapRandom){
+        for (RNGTypes type: RNGTypes.values()) {
+            randomMap.put(type,new RNGSupplier(randomMapRandom.nextLong(),type));
+        }
+    }
+    public void log(Level level,String message){
+        RNGSession.getInstance().log(level,"("+this.handlerIndex+")"+message);
     }
     /**
      * Creates a new {@link RNGHandler} using the provided {@code runId} and the {@code GetRandom} token obtained from the {@code Verification-Server}.
@@ -36,7 +52,7 @@ public class RNGHandler {
         try {
             return new RNGHandler(new Random(ServerSideRNG.getGetRandomToken(runId).get("random").getAsLong()).nextLong());
         } catch (IOException | NullPointerException e) {
-            ServerSideRNG.LOGGER.warn("Failed to create new RNGHandler: ");
+            ServerSideRNG.log(Level.WARN,"Failed to create new RNGHandler: ");
             e.printStackTrace();
             return null;
         }
@@ -48,24 +64,25 @@ public class RNGHandler {
      * @return a long generated and logged by the {@code Verification-Server}
      * @author Void_X_Walker
      */
-    public long getRngValue(RNGTypes type) {
+    protected long getRngValue(RNGTypes type,@Nullable String subType) {
         if (outOfNormalTime()) {
             if (outOfExtraTime()) {
-                ServerSideRNG.LOGGER.warn("RNGHandler called for type " + type.name() + " is in extra time!");
+                this.log(Level.WARN,"RNGHandler called for type " + type.name() + " is in extra time!");
             }
             else{
-                ServerSideRNG.LOGGER.warn("RNGHandler called for type " + type.name() + " outside time!");
+                this.log(Level.WARN,"RNGHandler called for type " + type.name() + " outside time!");
             }
         }
-        ServerSideRNG.LOGGER.info("[" + RNGSession.getInstance().runId + "] Getting Random for " + type);
-        return randomMap.get(type).nextLong();
+        this.log(Level.INFO,"Getting Random for " + type + (subType==null?"":"| "+subType)+ " ("+randomMap.get(type).getUseCases(subType)+")");
+        return randomMap.get(type).getRandom(subType).nextLong();
     }
     /**
      * Activates the {@link RNGHandler} by setting the {@link RNGHandler#startTime} to the current {@code System Time}
      * @author Void_X_Walker
      */
-    public void activate() {
+    public void activate(int handlerIndex) {
         startTime = System.nanoTime();
+        this.handlerIndex=handlerIndex;
     }
     /**
      * Returns whether the {@link RNGHandler} has passed its standard {@link ServerSideRNGConfig#USE_TIME}
@@ -88,17 +105,108 @@ public class RNGHandler {
      * @author Void_X_Walker
      */
     public enum RNGTypes{
-        MOB_DROP,
-        BLOCK_DROP,
+        MOB_DROP(true){
+            @Override
+            public void populateRandomMap(Map<String,RandomMapEntry> randomMap,Random random){
+                DefaultedRegistry<EntityType<?>> registry=Registry.ENTITY_TYPE;
+                for (EntityType<?> entityType : registry) {
+                    randomMap.put(entityType.getTranslationKey(),new RandomMapEntry( new Random(random.nextLong())));
+                }
+            }
+        },
+        BLOCK_DROP(true){
+            @Override
+            public void populateRandomMap(Map<String,RandomMapEntry> randomMap,Random random){
+                DefaultedRegistry<Block> registry=Registry.BLOCK;
+                for (Block block : registry) {
+                    randomMap.put(block.getTranslationKey(),new RandomMapEntry( new Random(random.nextLong())));
+                }
+            }
+        },
         BARTER,
         ENDER_DRAGON_ROTATION,
         ENDER_DRAGON_LANDING_APPROACH,
         ENDER_DRAGON_TARGET_HEIGHT,
+        ENDER_DRAGON_PATH,
         WORLD_SEED,
         THUNDER,
         PROJECTILE,
         FISHING_RESULT,
-        FISHING_TIME
+        FISHING_TIME,
+        VILLAGER_SELECT_OFFER(true){
+            @Override
+            public void populateRandomMap(Map<String, RandomMapEntry> randomMap, Random random){
+                DefaultedRegistry<VillagerProfession> registry=Registry.VILLAGER_PROFESSION;
+                for (VillagerProfession profession : registry) {
+                    randomMap.put(profession.toString(),new RandomMapEntry( new Random(random.nextLong())));
+                }
+            }
+        },
+        VILLAGER_OFFER(true){
+            @Override
+            public void populateRandomMap(Map<String, RandomMapEntry> randomMap, Random random){
+                DefaultedRegistry<VillagerProfession> registry=Registry.VILLAGER_PROFESSION;
+                for (VillagerProfession profession : registry) {
+                    randomMap.put(profession.toString(),new RandomMapEntry(new Random(random.nextLong())));
+                }
+            }
+        },
+        ENCHANTMENT;
+        public void populateRandomMap(Map<String, RandomMapEntry> randomMap, Random random){
+        }
+        private final boolean branchedRandom;
+        public boolean usesBranchedRandom(){
+            return branchedRandom;
+        }
+        RNGTypes(boolean branchedRandom){
+            this.branchedRandom=branchedRandom;
+        }
+        RNGTypes(){
+            this(false);
+        }
+
+    }
+    public class RNGSupplier {
+        private final LinkedHashMap<String,RandomMapEntry> randomMap;
+        public Random getRandom(@Nullable String subType){
+            RandomMapEntry entry;
+            if(subType!=null&&randomMap.containsKey(subType)){
+                entry= randomMap.get(subType);
+            }
+            else{
+                entry= randomMap.get("startRandom");
+            }
+            entry.useTimes++;
+            return entry.random;
+        }
+        public int getUseCases(String subType){
+            RandomMapEntry entry;
+            if(subType!=null&&randomMap.containsKey(subType)){
+                entry= randomMap.get(subType);
+            }
+            else{
+                entry= randomMap.get("startRandom");
+            }
+            return entry.useTimes;
+        }
+        public RNGSupplier(long seed,RNGTypes types){
+            Random startRandom = new Random(seed);
+            boolean branchedRandom = types.usesBranchedRandom();
+            this.randomMap=new LinkedHashMap<>();
+            if(branchedRandom){
+                types.populateRandomMap(randomMap, startRandom);
+            }
+            randomMap.put("startRandom",new RandomMapEntry(startRandom));
+        }
+
+    }
+    static class RandomMapEntry{
+        public Random random;
+        public int useTimes;
+        public RandomMapEntry(Random random){
+            this.random=random;
+            useTimes=0;
+        }
     }
 }
 

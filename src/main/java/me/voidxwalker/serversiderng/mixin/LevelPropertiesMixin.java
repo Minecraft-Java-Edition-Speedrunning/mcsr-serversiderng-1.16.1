@@ -60,7 +60,7 @@ public class LevelPropertiesMixin {
             Optional<Number> optional = dynamic.get("serversiderng-runid").asNumber().result();
             if (optional.isPresent()) {
                 RNGSession.instance = new RNGSession(optional.get().longValue());
-                ServerSideRNG.log(Level.INFO,"Successfully loaded RunID from file!");
+                RNGSession.getInstance().log(Level.INFO,"Successfully loaded RunID from file!");
             }
             else {
                 ServerSideRNG.log(Level.INFO,"Failed to load RunID from file!");
