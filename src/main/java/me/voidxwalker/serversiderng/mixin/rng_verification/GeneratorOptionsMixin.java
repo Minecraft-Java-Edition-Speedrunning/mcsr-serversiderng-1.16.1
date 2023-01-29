@@ -8,10 +8,8 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.Slice;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.OptionalLong;
 import java.util.function.Supplier;
@@ -26,16 +24,17 @@ public class GeneratorOptionsMixin {
      * @author Void_X_Walker
      * @see  RNGSession#getRngContext(RNGHandler.RNGTypes)
      */
-    @Inject(method = "withHardcore", at = @At(value = "HEAD"))
+    @Redirect(method = "withHardcore", at = @At(value = "INVOKE",target = "Ljava/util/OptionalLong;orElse(J)J"))
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-    private void modifySeedRandom(boolean hardcore, OptionalLong seed, CallbackInfoReturnable<GeneratorOptions> cir) {
+    private long modifySeedRandom(OptionalLong instance, long other) {
         RNGSession.getRngContext(RNGHandler.RNGTypes.WORLD_SEED)
             .map(Supplier::get)
             .ifPresent((it) -> this.seed = it);
+        return instance.orElse(this.seed);
     }
 
     /**
-     * Ensures that the {@link GeneratorOptions} use a {@link net.minecraft.world.gen.chunk.ChunkGenerator} created with the seed modified via {@link GeneratorOptionsMixin#modifySeedRandom(boolean, OptionalLong, CallbackInfoReturnable)}.
+     * Ensures that the {@link GeneratorOptions} use a {@link net.minecraft.world.gen.chunk.ChunkGenerator} created with the seed modified via {@link GeneratorOptionsMixin#modifySeedRandom(OptionalLong, long)}.
      * @author Void_X_Walker
      */
     @Redirect(
@@ -48,10 +47,11 @@ public class GeneratorOptionsMixin {
     )
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     private boolean ensureSeedConsistency(OptionalLong instance) {
+        System.out.println("ensureSeedConsistency"+(RNGSession.inSession() || instance.isPresent()));
         return RNGSession.inSession() || instance.isPresent();
     }
     /**
-     * Ensures that the {@link GeneratorOptions} use a {@link net.minecraft.world.gen.chunk.ChunkGenerator} created with the seed modified via {@link GeneratorOptionsMixin#modifySeedRandom(boolean, OptionalLong, CallbackInfoReturnable)}.
+     * Ensures that the {@link GeneratorOptions} use a {@link net.minecraft.world.gen.chunk.ChunkGenerator} created with the seed modified via {@link GeneratorOptionsMixin#modifySeedRandom(OptionalLong, long)}.
      * @author Void_X_Walker
      */
     @Redirect(
@@ -64,6 +64,7 @@ public class GeneratorOptionsMixin {
     )
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     private long ensureSeedConsistency2(OptionalLong instance) {
+        System.out.println("ensureSeedConsistency2"+( instance.isPresent()));
         return instance.orElse(this.seed);
     }
 }
