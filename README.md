@@ -23,6 +23,8 @@ You can find a ZIP-File with your world name in ".minecraft/verification-zips". 
 You can turn off the first three methods of uploading your run listed above via the ".minecraft/config/serversiderng/serversiderng.properties" file.
 Turning any of these methods off is not recommended.
 
+##Javadoc https://voidxwalker.github.io
+
 ## Authors
 
 - [@Void_X_Walker](https://www.github.com/voidxwalker) (https://ko-fi.com/voidxwalker)
