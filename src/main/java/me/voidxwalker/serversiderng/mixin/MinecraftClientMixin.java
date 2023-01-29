@@ -28,16 +28,20 @@ public class MinecraftClientMixin {
     public long serverSideRNG_lastInWorld;
     /**
      * If the client has been disconnected from a server for 5 seconds, the has of the last world gets uploaded
-     * @see ServerSideRNG#getAndUploadHash(File)
+     * @see ServerSideRNG#getAndUploadHash(File,long)
      * @author Void_X_Walker
      */
     @Inject(method = "render",at = @At("HEAD"))
     public void trackLastInWorld(CallbackInfo ci){
         if(ServerSideRNGConfig.UPLOAD_ON_WORLD_LEAVE){
             serverSideRNG_lastInWorld=this.server!=null?System.nanoTime(): serverSideRNG_lastInWorld;
-            if(ServerSideRNG.lastWorldFile!=null&& System.nanoTime()-serverSideRNG_lastInWorld> ServerSideRNGConfig.TIME_OUT_OF_WORLD_BEFORE_AUTOUPLOAD){
-                ServerSideRNG.uploadHash(true,false);
+            if( System.nanoTime()-serverSideRNG_lastInWorld> ServerSideRNGConfig.TIME_OUT_OF_WORLD_BEFORE_AUTOUPLOAD){
+                if(ServerSideRNG.lastSession!=null){
+                    serverSideRNG_lastInWorld=Long.MAX_VALUE;
+                    ServerSideRNG.getAndUploadHash(ServerSideRNG.lastSession.lastWorldFile, ServerSideRNG.lastSession.lastRunId);
+                }
             }
+
         }
     }
     /**
@@ -54,10 +58,10 @@ public class MinecraftClientMixin {
             if (RNGSession.getInstance().rngHandlerCompletableFuture.isDone()) {
                 RNGSession.getInstance().getRngHandlerFromFuture();
             }
-            ServerSideRNG.lastWorldFile= Objects.requireNonNull(MinecraftClient.getInstance().getServer())
+            ServerSideRNG.lastSession= new ServerSideRNG.LastSession(Objects.requireNonNull(MinecraftClient.getInstance().getServer())
                     .getSavePath(WorldSavePath.ROOT)
                     .toFile()
-                    .getParentFile();
+                    .getParentFile(),RNGSession.getInstance().runId);
         }
     }
     /**
@@ -82,13 +86,14 @@ public class MinecraftClientMixin {
     }
     /**
      * Tries to upload the Hash of the Run when Minecraft shuts
-     * @see ServerSideRNG#getAndUploadHash(File)
+     * @see ServerSideRNG#getAndUploadHash(File,long)
      * @author Void_X_Walker
      */
     @Inject(method = "stop",at = @At("HEAD"))
     public void saveOnShutdown(CallbackInfo ci){
-        if(ServerSideRNG.lastWorldFile!=null&&(this.server ==null||RNGSession.inSession())){
-            ServerSideRNG.getAndUploadHash(ServerSideRNG.lastWorldFile);
+        if(ServerSideRNG.lastSession!=null&&(this.server ==null||RNGSession.inSession())){
+            long runId= RNGSession.inSession()?RNGSession.getInstance().runId:ServerSideRNG.lastSession.lastRunId;
+            ServerSideRNG.getAndUploadHash(ServerSideRNG.lastSession.lastWorldFile,runId);
         }
     }
     /**

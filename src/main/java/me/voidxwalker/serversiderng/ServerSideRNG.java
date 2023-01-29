@@ -15,7 +15,6 @@ import net.minecraft.util.WorldSavePath;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
@@ -35,11 +34,12 @@ public class ServerSideRNG implements ClientModInitializer {
     public static boolean needsUpload(){
         return impendingUpload.getAndSet(false);
     }
-    public static File lastWorldFile;
+    public static LastSession lastSession;
+
     /**
      * Adds an event to the {@code onComplete} listener of <a href="https://github.com/RedLime/SpeedRunIGT">SpeedRunIGT</a> that fires at run completion.
      * It will save the world and upload its Hash after a delay of one second.
-     * @see ServerSideRNG#getAndUploadHash(File)  )
+     * @see ServerSideRNG#getAndUploadHash(File,long)  )
      * @author Void_X_Walker
      */
     @Override
@@ -70,15 +70,15 @@ public class ServerSideRNG implements ClientModInitializer {
         LOGGER.log(level,message);
     }
     /**
-     * Registers the command {@code serversiderng_uploadRun} that will save the world and upload it's hash via the {@link ServerSideRNG#getAndUploadHash(File)} method.
+     * Registers the command {@code serversiderng_uploadRun} that will save the world and upload it's hash via the {@link ServerSideRNG#getAndUploadHash(File,long)} method.
      * @param dispatcher the {@link CommandDispatcher} to add the command to
-     * @see ServerSideRNG#getAndUploadHash(File)  )
+     * @see ServerSideRNG#getAndUploadHash(File,long)  )
      * @author Void_X_Walker
      */
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         dispatcher.register( CommandManager.literal("serversiderng_uploadRun").executes(context -> {
             if(RNGSession.inSession()){
-                uploadHash(false,true);
+                uploadHash(RNGSession.getInstance().runId);
             }
             return 1;
         }));
@@ -87,14 +87,14 @@ public class ServerSideRNG implements ClientModInitializer {
      * Packs the current world folder and the latest.log file into a {@code ZIP} file named "verification-[worldFileName].zip" in the {@link ServerSideRNG#verificationFolder} using  {@link IOUtils#packZipFile(String, String, String)}
      * It then converts the {@code ZIP-File} into a {@code Hash} using {@link IOUtils#zipToHash(File)}
      * and sends it to the {@code Verification-Server} using  {@link ServerSideRNG#uploadHashToken(long, String)}
-     * This method should be called asynchronously via {@link ServerSideRNG#uploadHash(boolean, boolean)} if possible.
+     * This method should be called asynchronously via {@link ServerSideRNG#uploadHash( long)} if possible.
      * @param worldFile the file of the world to zip and upload the hash of
      * @see  IOUtils#zipToHash(File)
      * @see IOUtils#packZipFile(String, String, String)
      * @see ServerSideRNG#uploadHashToken(long, String) )
      * @author Void_X_Walker
      */
-    public static void getAndUploadHash(File worldFile) {
+    public static void getAndUploadHash(File worldFile,long runId) {
         try {
             File logsFile = new File(MinecraftClient.getInstance().runDirectory,"logs/latest.log");
             File zipFile =  new File(
@@ -102,38 +102,38 @@ public class ServerSideRNG implements ClientModInitializer {
             );
             IOUtils.packZipFile(zipFile.getPath(), worldFile.getPath(), logsFile.getPath());
             String hash = IOUtils.zipToHash(zipFile);
-            ServerSideRNG.uploadHashToken(RNGSession.getInstance().runId, hash);
-            RNGSession.getInstance().log(Level.INFO, "Successfully uploaded File Hash!");
+            ServerSideRNG.uploadHashToken(runId, hash);
+            ServerSideRNG.log(Level.INFO, "Successfully uploaded File Hash!");
         } catch (Exception e) {
             ServerSideRNG.log(Level.WARN, "Failed to uploaded File Hash: ");
             e.printStackTrace();
         }
     }
-    public static void uploadHash(boolean lastSave,boolean playerFeedback){
-        if( MinecraftClient.getInstance().getServer()!=null){
+    public static void uploadHash(long runId){
+        if( MinecraftClient.getInstance().getServer()!=null) {
             MinecraftClient.getInstance().getServer().getPlayerManager().saveAllPlayerData();
             MinecraftClient.getInstance().getServer().save(true, false, false);
-        }
-        CompletableFuture.runAsync(()->{
-            ServerSideRNG.getAndUploadHash(MinecraftClient
+            MinecraftClient
                     .getInstance()
                     .getServer()
-                    .getSavePath(WorldSavePath.ROOT)
-                    .toFile()
-                    .getParentFile());
-            if(MinecraftClient.getInstance().getServer()!=null&&playerFeedback){
-                MinecraftClient
+                    .getCommandSource()
+                    .sendFeedback(new LiteralText("Successfully uploaded the Run!")
+                            .styled(style -> style.withColor(Formatting.GREEN)
+                            ), false);
+            CompletableFuture.runAsync(() -> {
+                ServerSideRNG.getAndUploadHash(MinecraftClient
                         .getInstance()
                         .getServer()
-                        .getCommandSource()
-                        .sendFeedback(new LiteralText("Successfully uploaded the Run!")
-                                .styled(style -> style.withColor(Formatting.GREEN)
-                                ),false);
-            }
-            if(lastSave){
-                ServerSideRNG.lastWorldFile=null;
-            }
-        });
+                        .getSavePath(WorldSavePath.ROOT)
+                        .toFile()
+                        .getParentFile(), runId);
+                if (MinecraftClient.getInstance().player != null) {
+                    MinecraftClient.getInstance().player.getCommandSource().sendFeedback(new LiteralText("Successfully uploaded the Run!")
+                                    .styled(style -> style.withColor(Formatting.GREEN)
+                                    ), false);
+                }
+            });
+        }
     }
     /**
      * Sends a {@code startRunRequest} to the {@code Verification-Server} via the {@link ServerSideRNGConfig#START_RUN_URL},
@@ -190,5 +190,13 @@ public class ServerSideRNG implements ClientModInitializer {
         json.addProperty("hash", hash);
         json.addProperty("runId", runId);
         IOUtils.makeRequest(json, ServerSideRNGConfig.UPLOAD_HASH_URL);
+    }
+    public static class LastSession{
+        public  File lastWorldFile;
+        public long lastRunId;
+        public LastSession(File lastWorldFile, long lastRunId){
+            this.lastRunId=lastRunId;
+            this.lastWorldFile=lastWorldFile;
+        }
     }
 }

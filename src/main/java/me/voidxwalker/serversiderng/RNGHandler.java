@@ -1,7 +1,6 @@
 package me.voidxwalker.serversiderng;
 
 import net.minecraft.block.Block;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.util.registry.DefaultedRegistry;
 import net.minecraft.util.registry.Registry;
@@ -166,7 +165,7 @@ public class RNGHandler {
         }
 
     }
-    public class RNGSupplier {
+    public static class RNGSupplier {
         private final LinkedHashMap<String,RandomMapEntry> randomMap;
         public Random getRandom(@Nullable String subType){
             RandomMapEntry entry;

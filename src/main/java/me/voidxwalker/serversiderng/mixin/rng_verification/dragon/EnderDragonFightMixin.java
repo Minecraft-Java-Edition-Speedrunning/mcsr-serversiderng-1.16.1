@@ -1,4 +1,4 @@
-package me.voidxwalker.serversiderng.mixin.rng_verification;
+package me.voidxwalker.serversiderng.mixin.rng_verification.dragon;
 
 import me.voidxwalker.serversiderng.RNGHandler;
 import me.voidxwalker.serversiderng.RNGSession;

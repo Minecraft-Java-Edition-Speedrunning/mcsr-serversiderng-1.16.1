@@ -32,11 +32,11 @@ public class LevelPropertiesMixin {
     @Inject(method = "updateProperties", at = @At("TAIL"))
     public void saveRunId(RegistryTracker registryTracker, CompoundTag compoundTag, CompoundTag compoundTag2, CallbackInfo ci) {
         if (RNGSession.inSession()) {
-            compoundTag.putLong("server-side-rng-runId", RNGSession.getInstance().runId);
+            compoundTag.putLong("serversiderng-runid", RNGSession.getInstance().runId);
             serverSideRNG_cachedRunID = RNGSession.getInstance().runId;
         }
         else if (serverSideRNG_cachedRunID != null) {
-            compoundTag.putLong("server-side-rng-runId", serverSideRNG_cachedRunID);
+            compoundTag.putLong("serversiderng-runid", serverSideRNG_cachedRunID);
         }
     }
     /**

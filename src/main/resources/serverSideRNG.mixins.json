@@ -13,16 +13,17 @@
     "TitleScreenMixin",
     "rng_verification.AbstractTraderEntityMixin",
     "rng_verification.BlockMixin",
-    "rng_verification.EnderDragonFightMixin",
     "rng_verification.FishingBobberEntityMixin",
     "rng_verification.GeneratorOptionsMixin",
     "rng_verification.LivingEntityMixin",
     "rng_verification.PiglinBrainMixin",
     "rng_verification.ProjectileEntityMixin",
     "rng_verification.ServerWorldMixin",
+    "rng_verification.PlayerEntityMixin",
     "rng_verification.dragon.HoldingPatternPhaseMixin",
     "rng_verification.dragon.LandingApproachPhaseMixin",
-    "rng_verification.dragon.StrafePlayerPhaseMixin"
+    "rng_verification.dragon.StrafePlayerPhaseMixin",
+    "rng_verification.dragon.EnderDragonFightMixin"
   ],
   "injectors": {
     "defaultRequire": 1
