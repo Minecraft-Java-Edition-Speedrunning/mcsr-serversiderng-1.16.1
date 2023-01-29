@@ -16,7 +16,7 @@ ServerSideRNG will automatically verify your runs without any player input requi
 You can also manually upload your run via the "/serversiderng_uploadRun" command.
 If you think your run might not have been uploaded, immediately open a help thread in the Minecraft Java Edition Speedrunning Discord.
 
-##Speedrun.com Submissions
+## Speedrun.com Submissions
 You can find a ZIP-File with your world name in ".minecraft/verification-zips". Include this file in your Speedrun.com submission like you include your world file (e. g. via google drive)
 
 ## Config
