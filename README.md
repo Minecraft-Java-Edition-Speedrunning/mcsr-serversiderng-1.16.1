@@ -1,4 +1,4 @@
-# serverSideRNG
+# ServerSideRNG
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/voidxwalker)
 
 ServerSideRNG is an open-source, lightweight Minecraft Fabric mod that helps to ensure the legitimacy of Minecraft Speedruns, achieved by calculating important random values on a verification server.
