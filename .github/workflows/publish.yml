@@ -1,4 +1,4 @@
-ame: "publish"
+name: "publish"
 
 on:
   push:
@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
 
 env:
-  RELEASE_TITLE: "**TITLE HERE** build ${{github.run_number}}"
+  RELEASE_TITLE: "**ServerSideRNG** build ${{github.run_number}}"
   RELEASE_NUMBER: "${{github.run_number}}"
   RELEASE_FILE: "build/libs/*${{github.run_number}}.0.0.jar"
 
