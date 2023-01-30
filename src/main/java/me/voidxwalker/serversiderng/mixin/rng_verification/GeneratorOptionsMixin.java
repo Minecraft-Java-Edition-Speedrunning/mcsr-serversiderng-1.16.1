@@ -47,7 +47,6 @@ public class GeneratorOptionsMixin {
     )
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     private boolean ensureSeedConsistency(OptionalLong instance) {
-        System.out.println("ensureSeedConsistency"+(RNGSession.inSession() || instance.isPresent()));
         return RNGSession.inSession() || instance.isPresent();
     }
     /**
@@ -64,7 +63,6 @@ public class GeneratorOptionsMixin {
     )
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     private long ensureSeedConsistency2(OptionalLong instance) {
-        System.out.println("ensureSeedConsistency2"+( instance.isPresent()));
         return instance.orElse(this.seed);
     }
 }
