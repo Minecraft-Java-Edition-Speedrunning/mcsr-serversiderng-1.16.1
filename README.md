@@ -18,7 +18,7 @@ ServerSideRNG will automatically verify your runs without any player input requi
 - Being outside a world for 10 seconds
 - Completing a SpeedrunIGT run (gives a chat response)
   You can also manually upload your Speedrun via the "/serversiderng_uploadRun" command.
-  If you think your run might not have been uploaded, immediately open a help thread in the Minecraft Java Edition Speedrunning Discord.
+  If you think your run might not have been uploaded, immediately open a help thread in the [Minecraft Java Edition Speedrunning Discord](https://discord.gg/jmdFn3C).
 
 ## Config
 You can turn off the first three methods of uploading your Speedrun listed above via the ".minecraft/config/serversiderng/serversiderng.properties" file.
