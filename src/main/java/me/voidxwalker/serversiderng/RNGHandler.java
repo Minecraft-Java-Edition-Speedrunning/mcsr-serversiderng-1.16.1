@@ -9,6 +9,8 @@ import org.apache.logging.log4j.Level;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.net.ConnectException;
+import java.net.UnknownHostException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Random;
@@ -50,7 +52,12 @@ public class RNGHandler {
     public static RNGHandler createRNGHandlerOrNull(long runId) {
         try {
             return new RNGHandler(new Random(ServerSideRNG.getGetRandomToken(runId).get("random").getAsLong()).nextLong());
-        } catch (IOException | NullPointerException e) {
+        }
+        catch (UnknownHostException | ConnectException e){
+            ServerSideRNG.log(Level.WARN,"Failed to create new RNGHandler: Could not connect to the Server.");
+            return null;
+        }
+        catch (IOException | NullPointerException e) {
             ServerSideRNG.log(Level.WARN,"Failed to create new RNGHandler: ");
             e.printStackTrace();
             return null;
@@ -208,6 +215,3 @@ public class RNGHandler {
         }
     }
 }
-
-
-
