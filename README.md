@@ -12,7 +12,7 @@ By using ServerSideRNG you agree to your UUID (the public ID associated with you
 You can find a ZIP-File with your world name in ".minecraft/verification-zips". Include this file in your Speedrun.com submission like you include your world file (e. g. via google drive)
 
 ## Usage
-ServerSideRNG will automatically verify your runs without any player input required. After completing a run, make sure that the run has been uploaded. The run uploads automatically when:
+ServerSideRNG will automatically verify the RNG of your runs without any player input required. After completing a run, make sure that the run has been uploaded. The run uploads automatically when:
 - Running the /seed command (gives a chat response)
 - Terminating the game
 - Being outside a world for 10 seconds
