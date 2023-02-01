@@ -5,6 +5,8 @@ import org.apache.logging.log4j.Level;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.net.ConnectException;
+import java.net.UnknownHostException;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
@@ -129,7 +131,12 @@ public class RNGSession {
     public static RNGSession createRNGSessionOrNull() {
         try {
             return new RNGSession(ServerSideRNG.getStartRunToken());
-        } catch (IOException e) {
+        }
+        catch (UnknownHostException | ConnectException e){
+            ServerSideRNG.log(Level.WARN,"Failed to create new RNGSession: Could not connect to the Server.");
+            return null;
+        }
+        catch (IOException e) {
             ServerSideRNG.log(Level.WARN,"Failed to create new RNGSession: ");
             e.printStackTrace();
             return null;
@@ -208,8 +215,6 @@ public class RNGSession {
     public void getRngHandlerFromFuture() {
         try {
             currentRNGHandler = rngHandlerCompletableFuture.get(1L, TimeUnit.SECONDS);
-            currentRNGHandler.activate(handlerIndex++);
-            currentRNGHandler.log(Level.INFO,"Successfully updated the current RNGHandler!");
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
             e.printStackTrace();
         }
@@ -222,8 +227,15 @@ public class RNGSession {
             }
             else {
                 this.log(Level.WARN,"Failed to update the current RNGHandler!");
+                return;
             }
         }
+        else {
+            currentRNGHandler.activate(handlerIndex++);
+            currentRNGHandler.log(Level.INFO,"Successfully updated the current RNGHandler!");
+        }
+
+
         rngHandlerCompletableFuture = CompletableFuture.supplyAsync(()-> RNGHandler.createRNGHandlerOrNull(runId));
     }
     /**
