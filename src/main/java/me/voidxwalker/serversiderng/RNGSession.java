@@ -88,12 +88,7 @@ public class RNGSession {
      */
     public static void startRNGSession() {
         if (rngSessionCompletableFuture != null) {
-            try {
-                instance = rngSessionCompletableFuture.get();
-            } catch (InterruptedException | ExecutionException e) {
-                ServerSideRNG.log(Level.WARN,"Failed to start RNGSession async!");
-                instance = null;
-            }
+            instance = rngSessionCompletableFuture.getNow(null);
         }
         else {
             instance = createRNGSessionOrNull();
