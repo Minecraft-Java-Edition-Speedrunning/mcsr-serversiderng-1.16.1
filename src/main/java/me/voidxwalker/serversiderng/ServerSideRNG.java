@@ -86,12 +86,12 @@ public class ServerSideRNG implements ClientModInitializer {
     /**
      * Packs the current world folder and the latest.log file into a {@code ZIP} file named "verification-[worldFileName].zip" in the {@link ServerSideRNG#verificationFolder} using  {@link IOUtils#packZipFile(String, String, String)}
      * It then converts the {@code ZIP-File} into a {@code Hash} using {@link IOUtils#zipToHash(File)}
-     * and sends it to the {@code Verification-Server} using  {@link ServerSideRNG#uploadHashToken(long, String)}
+     * and sends it to the {@code Verification-Server} using  {@link ServerSideRNG#uploadHashToken(long, String,ClientAuth)}
      * This method should be called asynchronously via {@link ServerSideRNG#uploadHash( long)} if possible.
      * @param worldFile the file of the world to zip and upload the hash of
      * @see  IOUtils#zipToHash(File)
      * @see IOUtils#packZipFile(String, String, String)
-     * @see ServerSideRNG#uploadHashToken(long, String) )
+     * @see ServerSideRNG#uploadHashToken(long, String,ClientAuth)
      * @author Void_X_Walker
      */
     public static void getAndUploadHash(File worldFile,long runId) {
@@ -102,7 +102,11 @@ public class ServerSideRNG implements ClientModInitializer {
             );
             IOUtils.packZipFile(zipFile.getPath(), worldFile.getPath(), logsFile.getPath());
             String hash = IOUtils.zipToHash(zipFile);
-            ServerSideRNG.uploadHashToken(runId, hash);
+            ClientAuth auth = ClientAuth.getInstance();
+            if(auth==null){
+                throw new IllegalArgumentException("Failed to retrieve ClientAuth");
+            }
+            ServerSideRNG.uploadHashToken(runId, hash,auth);
             ServerSideRNG.log(Level.INFO, "Successfully uploaded File Hash!");
         } catch (Exception e) {
             ServerSideRNG.log(Level.WARN, "Failed to uploaded File Hash: ");
@@ -147,10 +151,10 @@ public class ServerSideRNG implements ClientModInitializer {
      * @see ServerSideRNGConfig#START_RUN_URL
      * @author Void_X_Walker
      */
-    static JsonObject getStartRunToken() throws IOException {
+    static JsonObject getStartRunToken(ClientAuth auth) throws IOException {
         JsonObject json = new JsonObject();
-        json.add("auth", ClientAuth.getInstance().createMessageJson());
-        json.addProperty("uuid", ClientAuth.getInstance().uuid.toString());
+        json.add("auth", auth.createMessageJson());
+        json.addProperty("uuid",auth.uuid.toString());
         return IOUtils.makeRequest(json, ServerSideRNGConfig.START_RUN_URL);
     }
     /**
@@ -165,10 +169,10 @@ public class ServerSideRNG implements ClientModInitializer {
      * @see ServerSideRNGConfig#GET_RANDOM_URL
      * @author Void_X_Walker
      */
-    static JsonObject getGetRandomToken(long runId) throws IOException {
+    static JsonObject getGetRandomToken(long runId,ClientAuth auth) throws IOException {
         JsonObject json = new JsonObject();
-        json.add("auth", ClientAuth.getInstance().createMessageJson());
-        json.addProperty("uuid", ClientAuth.getInstance().uuid.toString());
+        json.add("auth", auth.createMessageJson());
+        json.addProperty("uuid", auth.uuid.toString());
         json.addProperty("runId", runId);
         return IOUtils.makeRequest(json, ServerSideRNGConfig.GET_RANDOM_URL);
     }
@@ -183,10 +187,10 @@ public class ServerSideRNG implements ClientModInitializer {
      * @see ServerSideRNGConfig#UPLOAD_HASH_URL
      * @author Void_X_Walker
      */
-    static void uploadHashToken(long runId, String hash) throws IOException {
+    static void uploadHashToken(long runId, String hash,ClientAuth auth) throws IOException {
         JsonObject json = new JsonObject();
-        json.add("auth", ClientAuth.getInstance().createMessageJson());
-        json.addProperty("uuid", ClientAuth.getInstance().uuid.toString());
+        json.add("auth", auth.createMessageJson());
+        json.addProperty("uuid", auth.uuid.toString());
         json.addProperty("hash", hash);
         json.addProperty("runId", runId);
         IOUtils.makeRequest(json, ServerSideRNGConfig.UPLOAD_HASH_URL);

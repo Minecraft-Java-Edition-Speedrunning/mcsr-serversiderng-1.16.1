@@ -1,6 +1,7 @@
 package me.voidxwalker.serversiderng;
 
 import com.google.gson.JsonObject;
+import me.voidxwalker.serversiderng.auth.ClientAuth;
 import org.apache.logging.log4j.Level;
 import org.jetbrains.annotations.Nullable;
 
@@ -118,17 +119,21 @@ public class RNGSession {
      * This method should be called asynchronous due to the delay associated with the request.
      * @return a new {@link RNGSession} or {@code null} if an {@link IOException} occurred when making the request
      * @see  RNGSession#RNGSession(JsonObject)
-     * @see ServerSideRNG#getStartRunToken()
+     * @see ServerSideRNG#getStartRunToken(ClientAuth)
      * @author Void_X_Walker
      */
+    @Nullable
     public static RNGSession createRNGSessionOrNull() {
-        try {
-            return new RNGSession(ServerSideRNG.getStartRunToken());
-        } catch (IOException e) {
-            ServerSideRNG.log(Level.WARN,"Failed to create new RNGSession: ");
-            e.printStackTrace();
-            return null;
+        ClientAuth auth = ClientAuth.getInstance();
+        if(auth!=null){
+            try {
+                return new RNGSession(ServerSideRNG.getStartRunToken(auth));
+            } catch (IOException e) {
+                ServerSideRNG.log(Level.WARN,"Failed to create new RNGSession: ");
+                e.printStackTrace();
+            }
         }
+        return null;
     }
 
     /**

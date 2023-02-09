@@ -1,5 +1,6 @@
 package me.voidxwalker.serversiderng;
 
+import me.voidxwalker.serversiderng.auth.ClientAuth;
 import net.minecraft.block.Block;
 import net.minecraft.entity.EntityType;
 import net.minecraft.util.registry.DefaultedRegistry;
@@ -44,17 +45,22 @@ public class RNGHandler {
      * @param runId the {@code Long} {@code runId} of the session the newly created {@link RNGHandler} should belong to.
      * @return a new {@link RNGHandler} or {@code null} if an {@link IOException} occurred when making the request
      * @see  RNGHandler#RNGHandler(long)
-     * @see ServerSideRNG#getGetRandomToken(long)
+     * @see ServerSideRNG#getGetRandomToken(long,ClientAuth)
      * @author Void_X_Walker
      */
+    @Nullable
     public static RNGHandler createRNGHandlerOrNull(long runId) {
-        try {
-            return new RNGHandler(new Random(ServerSideRNG.getGetRandomToken(runId).get("random").getAsLong()).nextLong());
-        } catch (IOException | NullPointerException e) {
-            ServerSideRNG.log(Level.WARN,"Failed to create new RNGHandler: ");
-            e.printStackTrace();
-            return null;
+        ClientAuth auth = ClientAuth.getInstance();
+        if(auth!=null){
+            try {
+                return new RNGHandler(new Random(ServerSideRNG.getGetRandomToken(runId,auth).get("random").getAsLong()).nextLong());
+            } catch (IOException | NullPointerException e) {
+                ServerSideRNG.log(Level.WARN,"Failed to create new RNGHandler: ");
+                e.printStackTrace();
+
+            }
         }
+        return null;
     }
 
     /**
