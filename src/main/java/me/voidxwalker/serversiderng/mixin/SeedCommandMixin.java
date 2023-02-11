@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(SeedCommand.class)
 public class SeedCommandMixin {
-    @Inject(method = "method_13617",at = @At("TAIL"))
+    @Inject(method = "method_13617",at = @At("TAIL"),remap = false)
     private static void uploadHashOnSeedCommand(CommandContext<ServerCommandSource> commandContext, CallbackInfoReturnable<Integer> cir){
         if(RNGSession.inSession()&& ServerSideRNGConfig.UPLOAD_ON_SEED){
             ServerSideRNG.uploadHash(RNGSession.getInstance().runId);

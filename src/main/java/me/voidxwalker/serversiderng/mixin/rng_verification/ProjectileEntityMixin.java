@@ -29,7 +29,7 @@ public abstract class ProjectileEntityMixin {
      */
     @Inject(method = "setVelocity", at = @At("HEAD"))
     public void getDivergence(double x, double y, double z, float speed, float divergence, CallbackInfo ci) {
-        if (RNGSession.inSession()) {
+        if(RNGSession.inSession()){
             serverSideRNG_divergence = divergence;
         }
     }
@@ -44,14 +44,11 @@ public abstract class ProjectileEntityMixin {
             .filter((it) -> this.getOwner() instanceof PlayerEntity)
             .map(Supplier::get)
             .map(Random::new)
-            .map((random) -> {
-                instance.add(
-                    random.nextGaussian() * 0.007499999832361937D * (double) serverSideRNG_divergence,
-                    random.nextGaussian() * 0.007499999832361937D * (double) serverSideRNG_divergence,
-                    random.nextGaussian() * 0.007499999832361937D * (double) serverSideRNG_divergence
-                );
-                return instance;
-            })
+            .map((random) -> instance.add(
+                random.nextGaussian() * 0.007499999832361937D * (double) serverSideRNG_divergence,
+                random.nextGaussian() * 0.007499999832361937D * (double) serverSideRNG_divergence,
+                random.nextGaussian() * 0.007499999832361937D * (double) serverSideRNG_divergence
+            ))
             .orElse(instance.add(x,y,z));
     }
 }
