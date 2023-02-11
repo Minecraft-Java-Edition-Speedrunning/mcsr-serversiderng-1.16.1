@@ -1,5 +1,6 @@
 package me.voidxwalker.serversiderng.mixin;
 
+import me.voidxwalker.serversiderng.RNGInitializer;
 import me.voidxwalker.serversiderng.RNGSession;
 import net.minecraft.world.gen.GeneratorOptions;
 import org.spongepowered.asm.mixin.Mixin;
@@ -13,11 +14,11 @@ public class GeneratorOptionsMixin {
     /**
      * Starts a new {@link RNGSession}, right before world generation starts.
      * @author Void_X_Walker
-     * @see RNGSession#startRNGSession()
+     * @see RNGInitializer#startRNGSession()
      */
     @Inject(method = "withHardcore",at = @At("HEAD"))
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     public void startRun(boolean hardcore, OptionalLong seed, CallbackInfoReturnable<GeneratorOptions> cir) {
-        RNGSession.startRNGSession();
+        RNGInitializer.startRNGSession();
     }
 }

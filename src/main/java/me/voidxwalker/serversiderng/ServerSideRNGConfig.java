@@ -20,6 +20,7 @@ public class ServerSideRNGConfig {
     final static long EXTRA_TIME = 10000000000L; //10 seconds
 
     final static long GRACE_PERIOD=3000000000L; // 3 seconds
+    final static String VERIFICATION_FOLDER_HASH_ALG = "MD5";
     public static boolean UPLOAD_ON_SEED=true;
     public static boolean UPLOAD_ON_SHUTDOWN=true;
     public static boolean UPLOAD_ON_WORLD_LEAVE=true;

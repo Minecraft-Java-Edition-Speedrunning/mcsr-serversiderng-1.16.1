@@ -2,6 +2,12 @@ package me.voidxwalker.serversiderng;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import me.voidxwalker.serversiderng.auth.ClientAuth;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.text.LiteralText;
+import net.minecraft.util.FileNameUtil;
+import net.minecraft.util.Formatting;
+import net.minecraft.util.WorldSavePath;
 import org.apache.logging.log4j.Level;
 
 import java.io.*;
@@ -14,6 +20,7 @@ import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.concurrent.CompletableFuture;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -61,7 +68,7 @@ public class IOUtils {
      * @author Void_X_Walker
      */
     static String zipToHash(File zipFile) throws IOException, NoSuchAlgorithmException {
-        MessageDigest digest = MessageDigest.getInstance(ServerSideRNG.HASH_ALG);
+        MessageDigest digest = MessageDigest.getInstance(ServerSideRNGConfig.VERIFICATION_FOLDER_HASH_ALG);
         try(InputStream is = Files.newInputStream(zipFile.toPath())) {
             byte[] buffer = new byte[8192];
             int read;
@@ -119,5 +126,118 @@ public class IOUtils {
             return new JsonParser().parse(response.toString()).getAsJsonObject();
         }
         throw new IOException(""+httpURLConnection.getResponseCode());
+    }
+
+    /**
+     * Packs the current world folder and the latest.log file into a {@code ZIP} file named "verification-[worldFileName].zip" in the {@link ServerSideRNG#verificationFolder} using  {@link IOUtils#packZipFile(String, String, String)}
+     * It then converts the {@code ZIP-File} into a {@code Hash} using {@link IOUtils#zipToHash(File)}
+     * and sends it to the {@code Verification-Server} using  {@link ServerSideRNG#uploadHashToken(long, String)}
+     * This method should be called asynchronously via {@link ServerSideRNG#uploadHash( long)} if possible.
+     * @param worldFile the file of the world to zip and upload the hash of
+     * @see  IOUtils#zipToHash(File)
+     * @see IOUtils#packZipFile(String, String, String)
+     * @see ServerSideRNG#uploadHashToken(long, String) )
+     * @author Void_X_Walker
+     */
+    public static void getAndUploadHash(File worldFile,long runId) {
+        try {
+            File logsFile = new File(MinecraftClient.getInstance().runDirectory,"logs/latest.log");
+            File zipFile =  new File(
+                ServerSideRNG.verificationFolder, FileNameUtil.getNextUniqueName(ServerSideRNG.verificationFolder.toPath(),"verification-" + worldFile.getName(),".zip")
+            );
+            packZipFile(zipFile.getPath(), worldFile.getPath(), logsFile.getPath());
+            String hash = zipToHash(zipFile);
+            uploadHashToken(runId, hash);
+            ServerSideRNG.log(Level.INFO, "Successfully uploaded File Hash!");
+        } catch (Exception e) {
+            ServerSideRNG.log(Level.WARN, "Failed to uploaded File Hash: ");
+            e.printStackTrace();
+        }
+    }
+
+    public static void uploadHash(long runId){
+        if( MinecraftClient.getInstance().getServer()!=null) {
+            MinecraftClient.getInstance().getServer().getPlayerManager().saveAllPlayerData();
+            MinecraftClient.getInstance().getServer().save(true, false, false);
+            MinecraftClient
+                    .getInstance()
+                    .getServer()
+                    .getCommandSource()
+                    .sendFeedback(new LiteralText("Successfully uploaded the Run!")
+                            .styled(style -> style.withColor(Formatting.GREEN)
+                            ), false);
+            CompletableFuture.runAsync(() -> {
+                getAndUploadHash(MinecraftClient
+                        .getInstance()
+                        .getServer()
+                        .getSavePath(WorldSavePath.ROOT)
+                        .toFile()
+                        .getParentFile(), runId);
+                if (MinecraftClient.getInstance().player != null) {
+                    MinecraftClient.getInstance().player.getCommandSource().sendFeedback(new LiteralText("Successfully uploaded the Run!")
+                                    .styled(style -> style.withColor(Formatting.GREEN)
+                                    ), false);
+                }
+            });
+        }
+    }
+
+    /**
+     * Sends a {@code startRunRequest} to the {@code Verification-Server} via the {@link ServerSideRNGConfig#START_RUN_URL},
+     * and returns a {@link JsonObject} containing the {@code runId} of the session and the {@code random}.
+     * Automatically grabs the {@code UUID} of the current {@link com.mojang.authlib.GameProfile} for the upload.
+     * This method should be called asynchronous due to the delay associated with the request.
+     * @return a {@link JsonObject} with the  {@code runId} as the {@code Long} value for the {@code "runId"} property
+     * and the {@code random} as the {@code Long} value for the {@code "random"} property
+     * @throws IOException: If an error occurred when making the request
+     * @see  IOUtils#makeRequest(JsonObject, String)
+     * @see ServerSideRNGConfig#START_RUN_URL
+     * @author Void_X_Walker
+     */
+    static JsonObject getStartRunToken() throws IOException {
+        JsonObject json = new JsonObject();
+        json.add("auth", ClientAuth.getInstance().createMessageJson());
+        json.addProperty("uuid", ClientAuth.getInstance().uuid.toString());
+        return makeRequest(json, ServerSideRNGConfig.START_RUN_URL);
+    }
+
+    /**
+     * Sends a {@code getRandomRequest} with the {@code runId} to the {@code Verification-Server} via the {@link ServerSideRNGConfig#GET_RANDOM_URL},
+     * and returns a {@link JsonObject} containing the {@code random}.
+     * Automatically grabs the {@code UUID} of the current {@link com.mojang.authlib.GameProfile} for the upload.
+     * This method should be called asynchronous due to the delay associated with the request.
+     * @param runId the {@code Long} {@code runId} for the {@link RNGSession} associated with the request.
+     * @return a {@link JsonObject} with the {@code random} as the {@code Long} value for the {@code "random"} property
+     * @throws IOException: If an error occurred when making the request
+     * @see  IOUtils#makeRequest(JsonObject, String)
+     * @see ServerSideRNGConfig#GET_RANDOM_URL
+     * @author Void_X_Walker
+     */
+    static JsonObject getGetRandomToken(long runId) throws IOException {
+        JsonObject json = new JsonObject();
+        json.add("auth", ClientAuth.getInstance().createMessageJson());
+        json.addProperty("uuid", ClientAuth.getInstance().uuid.toString());
+        json.addProperty("runId", runId);
+        return makeRequest(json, ServerSideRNGConfig.GET_RANDOM_URL);
+    }
+
+    /**
+     * Uploads a {@code Hash} together with the {@code runId} to the {@code Verification-Server} via the {@link ServerSideRNGConfig#UPLOAD_HASH_URL}.
+     * Automatically grabs the {@code UUID} of the current {@link com.mojang.authlib.GameProfile} for the upload.
+     * This method should be called asynchronous due to the delay associated with the request.
+     * @param runId the {@code Long} {@code runId} for the {@link RNGSession} associated with the {code Hash}.
+     * @param hash the {@code Hash} that should be uploaded to the {@code Verification-Server}
+     * @throws IOException: If an error occurred when making the request
+     * @see  IOUtils#makeRequest(JsonObject, String)
+     * @see ServerSideRNGConfig#UPLOAD_HASH_URL
+     * @author Void_X_Walker
+     */
+    static void uploadHashToken(long runId, String hash) throws IOException {
+        JsonObject json = new JsonObject();
+        json.add("auth", ClientAuth.getInstance().createMessageJson());
+        json.addProperty("uuid", ClientAuth.getInstance().uuid.toString());
+        json.addProperty("hash", hash);
+        json.addProperty("runId", runId);
+        makeRequest(json, ServerSideRNGConfig.UPLOAD_HASH_URL);
     }
 }

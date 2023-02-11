@@ -38,7 +38,7 @@ public class RNGHandler {
         }
     }
     public void log(Level level,String message){
-        RNGSession.getInstance().log(level,"("+this.handlerIndex+")"+message);
+        ServerSideRNG.getRNGInitializer().ifPresent(rngInitializer -> rngInitializer.getInstance().log(level,"("+this.handlerIndex+")"+message);)
     }
     /**
      * Creates a new {@link RNGHandler} using the provided {@code runId} and the {@code GetRandom} token obtained from the {@code Verification-Server}.
@@ -46,12 +46,12 @@ public class RNGHandler {
      * @param runId the {@code Long} {@code runId} of the session the newly created {@link RNGHandler} should belong to.
      * @return a new {@link RNGHandler} or {@code null} if an {@link IOException} occurred when making the request
      * @see  RNGHandler#RNGHandler(long)
-     * @see ServerSideRNG#getGetRandomToken(long)
+     * @see IOUtils#getGetRandomToken(long)
      * @author Void_X_Walker
      */
     public static RNGHandler createRNGHandlerOrNull(long runId) {
         try {
-            return new RNGHandler(new Random(ServerSideRNG.getGetRandomToken(runId).get("random").getAsLong()).nextLong());
+            return new RNGHandler(new Random(IOUtils.getGetRandomToken(runId).get("random").getAsLong()).nextLong());
         }
         catch (UnknownHostException | ConnectException e){
             ServerSideRNG.log(Level.WARN,"Failed to create new RNGHandler: Could not connect to the Server.");

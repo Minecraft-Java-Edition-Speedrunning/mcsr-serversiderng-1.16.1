@@ -1,8 +1,6 @@
 package me.voidxwalker.serversiderng.mixin;
 
-import me.voidxwalker.serversiderng.RNGSession;
-import me.voidxwalker.serversiderng.ServerSideRNG;
-import me.voidxwalker.serversiderng.ServerSideRNGConfig;
+import me.voidxwalker.serversiderng.*;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.GameMenuScreen;
 import net.minecraft.client.gui.screen.Screen;
@@ -18,6 +16,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.io.File;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 @Mixin(MinecraftClient.class)
 public class MinecraftClientMixin {
@@ -28,7 +29,7 @@ public class MinecraftClientMixin {
     public long serverSideRNG_lastInWorld;
     /**
      * If the client has been disconnected from a server for 5 seconds, the has of the last world gets uploaded
-     * @see ServerSideRNG#getAndUploadHash(File,long)
+     * @see IOUtils#getAndUploadHash(File, long)
      * @author Void_X_Walker
      */
     @Inject(method = "render",at = @At("HEAD"))
@@ -38,7 +39,7 @@ public class MinecraftClientMixin {
             if( System.nanoTime()-serverSideRNG_lastInWorld> ServerSideRNGConfig.TIME_OUT_OF_WORLD_BEFORE_AUTOUPLOAD){
                 if(ServerSideRNG.lastSession!=null){
                     serverSideRNG_lastInWorld=Long.MAX_VALUE;
-                    ServerSideRNG.getAndUploadHash(ServerSideRNG.lastSession.lastWorldFile, ServerSideRNG.lastSession.lastRunId);
+                    IOUtils.getAndUploadHash(ServerSideRNG.lastSession.lastWorldFile, ServerSideRNG.lastSession.lastRunId);
                 }
             }
 
@@ -54,15 +55,13 @@ public class MinecraftClientMixin {
             at = @At(value = "INVOKE", target = "Lnet/minecraft/server/ServerNetworkIo;bindLocal()Ljava/net/SocketAddress;", shift = At.Shift.BEFORE)
     )
     public void updateHandlerAfterWorldGen(CallbackInfo ci) {
-        if (RNGSession.inSession()) {
-            if (RNGSession.getInstance().rngHandlerCompletableFuture.isDone()) {
-                RNGSession.getInstance().getRngHandlerFromFuture();
-            }
-            ServerSideRNG.lastSession= new ServerSideRNG.LastSession(Objects.requireNonNull(MinecraftClient.getInstance().getServer())
-                    .getSavePath(WorldSavePath.ROOT)
-                    .toFile()
-                    .getParentFile(),RNGSession.getInstance().runId);
-        }
+        RNGSession.getInstance().filter(rngSession -> rngSession.rngHandlerCompletableFuture.isDone()).ifPresent(RNGSession::getRngHandlerFromFuture);
+        RNGSession.getInstance().ifPresent(rngSession -> ServerSideRNG.lastSession= new ServerSideRNG.LastSession(
+                Objects.requireNonNull(MinecraftClient.getInstance().getServer())
+                        .getSavePath(WorldSavePath.ROOT)
+                        .toFile()
+                        .getParentFile(), rngSession.runId)
+        );
     }
     /**
      * Tries to update the {@link RNGSession#currentRNGHandler} every game tick.
@@ -72,28 +71,32 @@ public class MinecraftClientMixin {
      */
     @Inject(method = "tick", at = @At("HEAD"))
     public void tick(CallbackInfo ci) {
-        if (RNGSession.inSession()) {
-            if(!RNGSession.getInstance().isPaused()){
-                RNGSession.getInstance().updateRNGHandler();
-                if(this.paused&&currentScreen instanceof GameMenuScreen){
-                    RNGSession.getInstance().tryToPause();
+        ServerSideRNG.getRNGInitializer().map(rngInitializer -> rngInitializer.outOfTime() ? rngInitializer : null).ifPresent(RNGInitializer::update);
+        Optional<RNGSession> optional= RNGSession.getInstance();
+        optional.ifPresent(rngSession -> {
+            if(rngSession.isPaused()){
+                rngSession.updateRNGHandler();
+                if(this.paused && currentScreen instanceof GameMenuScreen){
+                    rngSession.tryToPause();
                 }
             }
-            else if(!this.paused){
-                RNGSession.getInstance().setPaused(false);
+            else {
+                if(!this.paused){
+                    rngSession.setPaused(false);
+                }
             }
-        }
+        });
     }
     /**
      * Tries to upload the Hash of the Run when Minecraft shuts
-     * @see ServerSideRNG#getAndUploadHash(File,long)
+     * @see IOUtils#getAndUploadHash(File, long)
      * @author Void_X_Walker
      */
     @Inject(method = "stop",at = @At("HEAD"))
     public void saveOnShutdown(CallbackInfo ci){
-        if(ServerSideRNG.lastSession!=null&&(this.server ==null||RNGSession.inSession())){
-            long runId= RNGSession.inSession()?RNGSession.getInstance().runId:ServerSideRNG.lastSession.lastRunId;
-            ServerSideRNG.getAndUploadHash(ServerSideRNG.lastSession.lastWorldFile,runId);
+        if(ServerSideRNG.lastSession!=null&&(this.server ==null|| RNGSession.inSession())){
+            long runId = ServerSideRNG.getRNGInitializer().flatMap(RNGInitializer::getInstance).map(rngSession -> rngSession.runId).orElse(ServerSideRNG.lastSession.lastRunId);
+            IOUtils.getAndUploadHash(ServerSideRNG.lastSession.lastWorldFile,runId);
         }
     }
     /**
@@ -102,8 +105,6 @@ public class MinecraftClientMixin {
      */
     @Inject(method = "startIntegratedServer(Ljava/lang/String;Lnet/minecraft/util/registry/RegistryTracker$Modifiable;Ljava/util/function/Function;Lcom/mojang/datafixers/util/Function4;ZLnet/minecraft/client/MinecraftClient$WorldLoadAction;)V", at = @At(value = "TAIL"))
     public void trackWorldRenderStart(CallbackInfo ci){
-        if (RNGSession.inSession()&&RNGSession.getInstance().inStartup()) {
-            RNGSession.getInstance().joinWorld();
-        }
+        ServerSideRNG.getRNGInitializer().flatMap(rngInitializer -> rngInitializer.getInstance().filter(RNGSession::inStartup)).ifPresent(RNGSession::joinWorld);
     }
 }

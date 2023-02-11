@@ -16,8 +16,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
 public class RNGSession {
-    public static CompletableFuture<RNGSession> rngSessionCompletableFuture;
-    public static RNGSession instance;
     private SessionState sessionState;
     private long worldJoinTime;
     public long runId;
@@ -37,14 +35,23 @@ public class RNGSession {
      * @author Void_X_Walker
      */
     RNGSession(JsonObject startRunToken) {
-        runId = startRunToken.get("runId").getAsLong();
+        this(startRunToken.get("runId").getAsLong(),startRunToken.get("random").getAsLong());
+    }
+    RNGSession(long runId, long seed) {
+        this.runId = runId;
         sessionState=SessionState.STARTUP;
-        Random random = new Random(startRunToken.get("random").getAsLong());
+        Random random = new Random(seed);
 
         currentRNGHandler = new RNGHandler(random.nextLong());
         backupRandom = new Random(random.nextLong());
         currentRNGHandler.activate(handlerIndex++);
         rngHandlerCompletableFuture = CompletableFuture.supplyAsync(()-> RNGHandler.createRNGHandlerOrNull(runId));
+    }
+    public static boolean inSession(){
+        return ServerSideRNG.getRNGInitializer().map(RNGInitializer::getInstance).isPresent();
+    }
+    public static Optional<RNGSession> getInstance(){
+        return   ServerSideRNG.getRNGInitializer().flatMap(RNGInitializer::getInstance);
     }
     /**
      * Creates new {@link RNGSession}. Should only be used to reenter a previous {@code Session} with the {@code runId} that session saved.
@@ -62,80 +69,6 @@ public class RNGSession {
     }
     public void log(Level level,String message){
         ServerSideRNG.log(level,"["+this.runId+"]"+message);
-    }
-    /**
-     * Returns the current {@link RNGSession}
-     * @return {@link RNGSession#instance}
-     */
-    public static RNGSession getInstance() {
-        return instance;
-    }
-
-    public static Optional<Supplier<Long>> getRngContext(RNGHandler.RNGTypes type, @Nullable String subType) {
-        return Optional.ofNullable(getInstance())
-            .map(RNGSession::getCurrentRNGHandler)
-            .map((it)-> () -> it.getRngValue(type,subType));
-    }
-    public static Optional<Supplier<Long>> getRngContext(RNGHandler.RNGTypes type) {
-        return getRngContext(type,null);
-    }
-
-    /**
-     * Starts a new {@link RNGSession}.
-     * If a new {@link RNGSession} has already been created async via the {@link RNGSession#rngSessionCompletableFuture} it will be retrieved via the {@link CompletableFuture#get()} method.
-     * In case of a failure, a new RNGSession will be created synchronously which could lead to noticeable lag.
-     * @author Void_X_Walker
-     */
-    public static void startRNGSession() {
-        if (rngSessionCompletableFuture != null) {
-            instance = rngSessionCompletableFuture.getNow(null);
-        }
-        else {
-            instance = createRNGSessionOrNull();
-            ServerSideRNG.log(Level.WARN,"Started RNGSession sync!");
-        }
-        if (instance != null) {
-            ServerSideRNG.log(Level.INFO, "Started RNGSession for runID = " + instance.runId);
-        }
-        rngSessionCompletableFuture = CompletableFuture.supplyAsync(RNGSession::createRNGSessionOrNull);
-    }
-    /**
-     * Stops and leaves the {@link RNGSession#instance}
-     * @author Void_X_Walker
-     */
-    public static void stopRNGSession() {
-        instance = null;
-    }
-    /**
-     * Returns whether {@code ServerSideRNG} is in a session
-     * @return true if the {@link RNGSession#instance} and the {@link RNGSession#currentRNGHandler} aren't {@code null}
-     * @see RNGSession#updateRNGHandler()
-     * @author Void_X_Walker
-     */
-    public static boolean inSession() {
-        return instance != null && instance.currentRNGHandler != null;
-    }
-    /**
-     * Creates a new {@link RNGSession} using the {@code StartRun} token obtained from the {@code Verification-Server}.
-     * This method should be called asynchronous due to the delay associated with the request.
-     * @return a new {@link RNGSession} or {@code null} if an {@link IOException} occurred when making the request
-     * @see  RNGSession#RNGSession(JsonObject)
-     * @see ServerSideRNG#getStartRunToken()
-     * @author Void_X_Walker
-     */
-    public static RNGSession createRNGSessionOrNull() {
-        try {
-            return new RNGSession(ServerSideRNG.getStartRunToken());
-        }
-        catch (UnknownHostException | ConnectException e){
-            ServerSideRNG.log(Level.WARN,"Failed to create new RNGSession: Could not connect to the Server.");
-            return null;
-        }
-        catch (IOException e) {
-            ServerSideRNG.log(Level.WARN,"Failed to create new RNGSession: ");
-            e.printStackTrace();
-            return null;
-        }
     }
 
     /**

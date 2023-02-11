@@ -1,7 +1,7 @@
 package me.voidxwalker.serversiderng.mixin.rng_verification;
 
 import me.voidxwalker.serversiderng.RNGHandler;
-import me.voidxwalker.serversiderng.RNGSession;
+import me.voidxwalker.serversiderng.ServerSideRNG;
 import net.minecraft.entity.passive.AbstractTraderEntity;
 import net.minecraft.entity.passive.VillagerEntity;
 import org.spongepowered.asm.mixin.Mixin;
@@ -21,7 +21,7 @@ public class AbstractTraderEntityMixin {
         if((AbstractTraderEntity)(Object)this instanceof VillagerEntity) {
             profession=((VillagerEntity) (Object) this).getVillagerData().getProfession().toString();
         }
-        return RNGSession.getRngContext(RNGHandler.RNGTypes.VILLAGER_SELECT_OFFER,profession)
+        return ServerSideRNG.getRngContext(RNGHandler.RNGTypes.VILLAGER_SELECT_OFFER,profession)
                 .map(Supplier::get)
                 .map((it)-> new Random(it).nextInt(i))
                 .orElse(random.nextInt(i));
@@ -37,7 +37,7 @@ public class AbstractTraderEntityMixin {
         if((AbstractTraderEntity)(Object)this instanceof VillagerEntity) {
             profession=((VillagerEntity) (Object) this).getVillagerData().getProfession().toString();
         }
-        return RNGSession.getRngContext(RNGHandler.RNGTypes.VILLAGER_OFFER,profession)
+        return ServerSideRNG.getRngContext(RNGHandler.RNGTypes.VILLAGER_OFFER,profession)
                 .map(Supplier::get)
                 .map(Random::new)
                 .orElse(random);

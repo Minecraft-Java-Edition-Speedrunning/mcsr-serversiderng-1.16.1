@@ -3,6 +3,7 @@ package me.voidxwalker.serversiderng.mixin;
 import com.mojang.datafixers.DataFixer;
 import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.Lifecycle;
+import me.voidxwalker.serversiderng.RNGInitializer;
 import me.voidxwalker.serversiderng.RNGSession;
 import me.voidxwalker.serversiderng.ServerSideRNG;
 import net.minecraft.nbt.CompoundTag;
@@ -31,13 +32,10 @@ public class LevelPropertiesMixin {
      */
     @Inject(method = "updateProperties", at = @At("TAIL"))
     public void saveRunId(RegistryTracker registryTracker, CompoundTag compoundTag, CompoundTag compoundTag2, CallbackInfo ci) {
-        if (RNGSession.inSession()) {
-            compoundTag.putLong("serversiderng-runid", RNGSession.getInstance().runId);
-            serverSideRNG_cachedRunID = RNGSession.getInstance().runId;
-        }
-        else if (serverSideRNG_cachedRunID != null) {
-            compoundTag.putLong("serversiderng-runid", serverSideRNG_cachedRunID);
-        }
+        RNGSession.getInstance().ifPresentOrElse(rngSession -> {
+            compoundTag.putLong("serversiderng-runid", rngSession.runId);
+            serverSideRNG_cachedRunID = rngSession.runId;
+        },() -> compoundTag.putLong("serversiderng-runid", serverSideRNG_cachedRunID));
     }
     /**
      * Creates a new {@link RNGSession} from the {@link RNGSession#runId} stored in the level.dat file.
@@ -59,8 +57,8 @@ public class LevelPropertiesMixin {
         if (dynamic.get("serversiderng-runid").result().isPresent()) {
             Optional<Number> optional = dynamic.get("serversiderng-runid").asNumber().result();
             if (optional.isPresent()) {
-                RNGSession.instance = new RNGSession(optional.get().longValue());
-                RNGSession.getInstance().log(Level.INFO,"Successfully loaded RunID from file!");
+                RNGInitializer.instance = new RNGSession(optional.get().longValue());
+                RNGInitializer.getInstance().log(Level.INFO,"Successfully loaded RunID from file!");
             }
             else {
                 ServerSideRNG.log(Level.INFO,"Failed to load RunID from file!");
