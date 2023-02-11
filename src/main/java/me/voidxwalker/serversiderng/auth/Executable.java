@@ -1,5 +1,5 @@
 package me.voidxwalker.serversiderng.auth;
 
-public interface Executable {
-    Object execute() throws Exception;
+public interface Executable<T> {
+    T get() throws Exception;
 }

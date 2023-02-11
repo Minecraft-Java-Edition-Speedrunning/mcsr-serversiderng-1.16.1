@@ -1,12 +1,18 @@
 package me.voidxwalker.serversiderng.mixin;
 
+import com.mojang.datafixers.util.Function4;
 import me.voidxwalker.serversiderng.*;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.GameMenuScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.world.ClientWorld;
+import net.minecraft.resource.DataPackSettings;
+import net.minecraft.resource.ResourceManager;
 import net.minecraft.server.integrated.IntegratedServer;
 import net.minecraft.util.WorldSavePath;
+import net.minecraft.util.registry.RegistryTracker;
+import net.minecraft.world.SaveProperties;
+import net.minecraft.world.level.storage.LevelStorage;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -17,7 +23,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.io.File;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 @Mixin(MinecraftClient.class)
@@ -34,16 +39,20 @@ public class MinecraftClientMixin {
      */
     @Inject(method = "render",at = @At("HEAD"))
     public void serversiderng_trackLastInWorld(CallbackInfo ci){
-        if(ServerSideRNGConfig.UPLOAD_ON_WORLD_LEAVE){
-            serverSideRNG_lastInWorld=this.server!=null?System.nanoTime(): serverSideRNG_lastInWorld;
-            if( System.nanoTime()-serverSideRNG_lastInWorld> ServerSideRNGConfig.TIME_OUT_OF_WORLD_BEFORE_AUTOUPLOAD){
-                ServerSideRNG.getLastSession().ifPresent(lastSession -> {
-                    serverSideRNG_lastInWorld=Long.MAX_VALUE;
-                    IOUtils.getAndUploadHash(lastSession.lastWorldFile, lastSession.lastRunId);
-                });
-            }
-
+        serverSideRNG_lastInWorld=this.server!=null?System.nanoTime(): serverSideRNG_lastInWorld;
+        if( ServerSideRNGConfig.UPLOAD_ON_WORLD_LEAVE&&System.nanoTime()-serverSideRNG_lastInWorld> ServerSideRNGConfig.TIME_OUT_OF_WORLD_BEFORE_AUTOUPLOAD){
+            ServerSideRNG.getLastSession().ifPresent(lastSession -> {serverSideRNG_lastInWorld=Long.MAX_VALUE;
+                IOUtils.getAndUploadHash(lastSession.lastWorldFile, lastSession.lastRunId);
+            });
         }
+        if(System.nanoTime()-serverSideRNG_lastInWorld> ServerSideRNGConfig.TIME_OUT_OF_WORLD_BEFORE_PAUSE){
+            RNGInitializer.setPaused(true);
+        }
+
+    }
+    @Inject(method = "startIntegratedServer(Ljava/lang/String;Lnet/minecraft/util/registry/RegistryTracker$Modifiable;Ljava/util/function/Function;Lcom/mojang/datafixers/util/Function4;ZLnet/minecraft/client/MinecraftClient$WorldLoadAction;)V",at = @At("HEAD"))
+    public void serversiderng_worldGenerationStart(CallbackInfo ci){
+        RNGInitializer.setPaused(false);
     }
     /**
      * Updates the {@code RNGSession.currentRNGHandler} at the end of world generation, if the {@code RNGSession.rngHandlerCompletableFuture} has completed.

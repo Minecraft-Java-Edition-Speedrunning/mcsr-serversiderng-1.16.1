@@ -9,7 +9,8 @@ import java.io.IOException;
 import java.util.Properties;
 
 public class ServerSideRNGConfig {
-    public final static long TIME_OUT_OF_WORLD_BEFORE_AUTOUPLOAD=10000000000L;
+    public final static long TIME_OUT_OF_WORLD_BEFORE_AUTOUPLOAD=10000000000L; //10 seconds
+    public final static long TIME_OUT_OF_WORLD_BEFORE_PAUSE=60000000000L; //60 seconds
     final static String BASE_URL = "https://serverside-rng-website-fputsekrmq-uc.a.run.app";
     final static String UPLOAD_HASH_URL = BASE_URL + "/uploadHash";
     final static String GET_RANDOM_URL = BASE_URL + "/getRandom";

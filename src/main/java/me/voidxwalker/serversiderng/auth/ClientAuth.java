@@ -7,7 +7,6 @@ import me.voidxwalker.serversiderng.ServerSideRNG;
 import net.minecraft.client.MinecraftClient;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.Level;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -21,28 +20,24 @@ import java.util.Base64;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 public class ClientAuth {
     final static String SIGNATURE_ALGORITHM = "SHA256withRSA";
     final static String DIGEST_ALGORITHM = "SHA-256";
     final static String CERTIFICATE_URL = "https://api.minecraftservices.com/player/certificates";
     final static long LOCK_TIMEOUT= 15000000000L; //15 seconds
-
-    String accessToken;
     public UUID uuid;
-    Proxy proxy;
     PlayerKeyPair pair;
 
-    private static CompletableFuture<ClientAuth> clientAuthCompletableFuture;
+    private static CompletableFuture<Optional<ClientAuth>> clientAuthCompletableFuture;
     private static ClientAuth instance;
     public static void log(Level level,String message){
         ServerSideRNG.log(level,"(ClientAuth) "+message);
     }
-    public static void setClientAuthCompletableFuture(CompletableFuture<ClientAuth> future){
+    public static void setClientAuthCompletableFuture(CompletableFuture<Optional<ClientAuth>> future){
         clientAuthCompletableFuture=future;
     }
-    public static Optional<CompletableFuture<ClientAuth>> getClientAuthCompletableFuture(){
+    public static Optional<CompletableFuture<Optional<ClientAuth>>> getClientAuthCompletableFuture(){
         return Optional.ofNullable(clientAuthCompletableFuture);
     }
     /**
@@ -52,11 +47,14 @@ public class ClientAuth {
      */
     public static Optional<ClientAuth> getInstance() {
         if (ClientAuth.instance == null) {
-            ClientAuth.getClientAuthCompletableFuture().ifPresent(clientAuthCompletableFuture1 -> ClientAuth.instance = clientAuthCompletableFuture1.getNow(null));
+            ClientAuth.getClientAuthCompletableFuture().ifPresent(clientAuthCompletableFuture1 -> ClientAuth.instance = clientAuthCompletableFuture1.getNow(Optional.empty()).orElseGet(()->{
+                setClientAuthCompletableFuture( CompletableFuture.supplyAsync(ClientAuth::createClientAuth));
+                return null;
+            }));
         }
         return Optional.ofNullable(ClientAuth.instance);
     }
-    public static Optional<Object> executeWithLock(Executable executable, long timeout) throws Exception{
+    public static Optional<ClientAuth> executeWithLock(Executable<ClientAuth> executable, long timeout) throws Exception{
         long startTime = System.nanoTime();
         while (System.nanoTime()-startTime<timeout) {
                 String lockFileName = "serversiderng-clientlock-" + UUID.randomUUID();
@@ -67,13 +65,12 @@ public class ClientAuth {
                 if (lock != null) {
 
                     Thread.sleep(500);
-                    Optional<Object> optional =Optional.ofNullable( executable.execute());
+                    Optional<ClientAuth> optional =Optional.ofNullable( executable.get());
                     lock.release();
                     lockAccessFile.close();
                     lockFile.delete();
                     return optional;
                 } else {
-                    // Wait for the lock to be released
                     lockAccessFile.close();
 
                 }
@@ -88,16 +85,13 @@ public class ClientAuth {
         this.pair = PlayerKeyPair.fetchKeyPair(readInputStream(postInternal(ClientAuth.constantURL(), new byte[0],accessToken,proxy)));
         this.uuid = MinecraftClient.getInstance().getSession().getProfile().getId();
     }
-    @Nullable
-    public static ClientAuth createClientAuth() {
+    public static Optional<ClientAuth> createClientAuth() {
         try {
-            Optional<Object> optional= executeWithLock(ClientAuth::new, LOCK_TIMEOUT);
-            return (ClientAuth)optional.orElseThrow(Exception::new);
+            return executeWithLock(ClientAuth::new, LOCK_TIMEOUT);
         } catch (Exception e) {
             log(Level.WARN,"Failed to create Authentication: ");
             e.printStackTrace();
-            ClientAuth.clientAuthCompletableFuture = CompletableFuture.supplyAsync(ClientAuth::createClientAuth);
-            return null;
+            return Optional.empty();
         }
     }
     /**

@@ -113,7 +113,7 @@ public class RNGSession {
 
     }
     public void setPaused(boolean paused){
-        ServerSideRNG.log(Level.INFO,(paused?"Paused ":"Unpaused ")+"the RNGHandler.");
+        ServerSideRNG.log(Level.INFO,(paused?"Paused ":"Unpaused ")+"the RNGSession.");
         sessionState=paused?SessionState.PAUSED:SessionState.RUNNING;
     }
     public boolean isPaused(){

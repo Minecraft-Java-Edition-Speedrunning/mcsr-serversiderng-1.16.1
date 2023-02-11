@@ -16,12 +16,16 @@ public class RNGInitializer {
     private long startTime;
     private final long runId;
     private final Random initializer;
+    private static boolean pauseUpdates;
     public RNGInitializer(JsonObject jsonObject) throws Throwable {
         this(Optional.ofNullable(jsonObject.get("seed")).orElseThrow((Supplier<Throwable>)() -> new IllegalArgumentException("Invalid JsonObject!")).getAsLong(),Optional.ofNullable(jsonObject.get("runId")).orElseThrow((Supplier<Throwable>)() -> new IllegalArgumentException("Invalid JsonObject!")).getAsLong());
     }
     public RNGInitializer(long seed,long runId){
         initializer=new Random(seed);
         this.runId=runId;
+    }
+    public static void setPaused(boolean paused){
+        pauseUpdates=paused;
     }
     public void setSession(RNGSession session){
         this.instance=session;
@@ -95,11 +99,11 @@ public class RNGInitializer {
     }
 
     public static void update(){
-        if(!RNGSession.inSession()){
+        if(!RNGSession.inSession()&&!pauseUpdates){
             ServerSideRNG.getRngInitializerCompletableFuture().ifPresentOrElse(completableFuture -> completableFuture.getNow(Optional.empty()).ifPresent(rngInitializer -> {
                 rngInitializer.activate();
                 ServerSideRNG.setCurrentInitializer(rngInitializer);
-            }),()->ServerSideRNG.log(Level.WARN,"Failed to RNGInitializer!") );
+            }),()->ServerSideRNG.log(Level.WARN,"Failed to update RNGInitializer!") );
             ServerSideRNG.setRngInitializerCompletableFuture( CompletableFuture.supplyAsync(RNGInitializer::createRNGInitializer));
         }
     }

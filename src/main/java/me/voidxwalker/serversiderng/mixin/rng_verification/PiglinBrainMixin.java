@@ -3,7 +3,6 @@ package me.voidxwalker.serversiderng.mixin.rng_verification;
 import me.voidxwalker.serversiderng.RNGHandler;
 import me.voidxwalker.serversiderng.ServerSideRNG;
 import net.minecraft.entity.mob.PiglinBrain;
-import net.minecraft.loot.context.LootContext;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
