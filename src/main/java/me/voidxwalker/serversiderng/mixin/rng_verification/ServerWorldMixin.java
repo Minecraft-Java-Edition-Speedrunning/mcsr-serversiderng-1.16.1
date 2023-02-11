@@ -1,7 +1,7 @@
 package me.voidxwalker.serversiderng.mixin.rng_verification;
 
 import me.voidxwalker.serversiderng.RNGHandler;
-import me.voidxwalker.serversiderng.RNGInitializer;
+import me.voidxwalker.serversiderng.RNGSession;
 import me.voidxwalker.serversiderng.ServerSideRNG;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.profiler.Profiler;
@@ -28,7 +28,7 @@ public abstract class ServerWorldMixin extends World {
     @Shadow @Final private ServerWorldProperties worldProperties;
 
     @Unique
-    private Boolean serverSideRNG_duringThunder;
+    private Boolean serversiderng_duringThunder;
 
     protected ServerWorldMixin(
             MutableWorldProperties mutableWorldProperties,
@@ -48,32 +48,32 @@ public abstract class ServerWorldMixin extends World {
      * @author Void_X_Walker
      */
     @Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/ServerWorldProperties;setRaining(Z)V"))
-    public void modifyThunderRandom(CallbackInfo ci) {
+    public void serversiderng_modifyThunderRandom(CallbackInfo ci) {
         ServerSideRNG.getRngContext(RNGHandler.RNGTypes.THUNDER)
-            .filter((it) -> serverSideRNG_duringThunder != null)
+            .filter((it) -> serversiderng_duringThunder != null)
             .map(Supplier::get)
             .map(Random::new)
             .ifPresent((random -> worldProperties.setThunderTime(
-                serverSideRNG_duringThunder ? random.nextInt(12000) + 3600
+                serversiderng_duringThunder ? random.nextInt(12000) + 3600
                     : random.nextInt(168000) + 12000
             )));
-        serverSideRNG_duringThunder = null;
+        serversiderng_duringThunder = null;
     }
     /**
-     * Predicts how {@link ServerWorld#tick(BooleanSupplier)} will modify the thunder property and sets {@link ServerWorldMixin#serverSideRNG_duringThunder} accordingly: {@code null} if the thunder won't be verified at all and {@code true} / {@code false} depending on if the thunder modification occurred during thunder.
+     * Predicts how {@link ServerWorld#tick(BooleanSupplier)} will modify the thunder property and sets {@link ServerWorldMixin#serversiderng_duringThunder} accordingly: {@code null} if the thunder won't be verified at all and {@code true} / {@code false} depending on if the thunder modification occurred during thunder.
      * @author Void_X_Walker
      */
     @Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/MutableWorldProperties;isRaining()Z"))
-    public void getRandom(BooleanSupplier shouldKeepTicking, CallbackInfo ci) {
-        if (!RNGInitializer.inSession()) {
-            serverSideRNG_duringThunder = null;
+    public void serversiderng_getRandom(BooleanSupplier shouldKeepTicking, CallbackInfo ci) {
+        if (!RNGSession.inSession()) {
+            serversiderng_duringThunder = null;
             return;
         }
         int i = worldProperties.getClearWeatherTime();
         int j = worldProperties.getThunderTime();
         boolean bl2 = properties.isThundering();
         if (i <= 0 && j <= 0) {
-            serverSideRNG_duringThunder = bl2;
+            serversiderng_duringThunder = bl2;
         }
     }
 }

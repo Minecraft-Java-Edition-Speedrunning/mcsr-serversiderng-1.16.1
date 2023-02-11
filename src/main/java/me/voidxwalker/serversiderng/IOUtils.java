@@ -21,6 +21,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -131,12 +132,12 @@ public class IOUtils {
     /**
      * Packs the current world folder and the latest.log file into a {@code ZIP} file named "verification-[worldFileName].zip" in the {@link ServerSideRNG#verificationFolder} using  {@link IOUtils#packZipFile(String, String, String)}
      * It then converts the {@code ZIP-File} into a {@code Hash} using {@link IOUtils#zipToHash(File)}
-     * and sends it to the {@code Verification-Server} using  {@link ServerSideRNG#uploadHashToken(long, String)}
-     * This method should be called asynchronously via {@link ServerSideRNG#uploadHash( long)} if possible.
+     * and sends it to the {@code Verification-Server} using  {@link IOUtils#uploadHashToken(long, String,ClientAuth)}
+     * This method should be called asynchronously via {@link IOUtils#uploadHash( long)} if possible.
      * @param worldFile the file of the world to zip and upload the hash of
      * @see  IOUtils#zipToHash(File)
      * @see IOUtils#packZipFile(String, String, String)
-     * @see ServerSideRNG#uploadHashToken(long, String) )
+     * @see IOUtils#uploadHashToken(long, String,ClientAuth)
      * @author Void_X_Walker
      */
     public static void getAndUploadHash(File worldFile,long runId) {
@@ -147,9 +148,10 @@ public class IOUtils {
             );
             packZipFile(zipFile.getPath(), worldFile.getPath(), logsFile.getPath());
             String hash = zipToHash(zipFile);
-            uploadHashToken(runId, hash);
+
+            uploadHashToken(runId, hash,ClientAuth.getInstance().orElseThrow((Supplier<Throwable>) () -> new IllegalStateException("Failed to retrieve ClientAuth")));
             ServerSideRNG.log(Level.INFO, "Successfully uploaded File Hash!");
-        } catch (Exception e) {
+        } catch (Throwable e) {
             ServerSideRNG.log(Level.WARN, "Failed to uploaded File Hash: ");
             e.printStackTrace();
         }
@@ -194,10 +196,10 @@ public class IOUtils {
      * @see ServerSideRNGConfig#START_RUN_URL
      * @author Void_X_Walker
      */
-    static JsonObject getStartRunToken() throws IOException {
+    static JsonObject getStartRunToken(ClientAuth auth) throws IOException {
         JsonObject json = new JsonObject();
-        json.add("auth", ClientAuth.getInstance().createMessageJson());
-        json.addProperty("uuid", ClientAuth.getInstance().uuid.toString());
+        json.add("auth", auth.createMessageJson());
+        json.addProperty("uuid", auth.uuid.toString());
         return makeRequest(json, ServerSideRNGConfig.START_RUN_URL);
     }
 
@@ -213,10 +215,10 @@ public class IOUtils {
      * @see ServerSideRNGConfig#GET_RANDOM_URL
      * @author Void_X_Walker
      */
-    static JsonObject getGetRandomToken(long runId) throws IOException {
+    static JsonObject getGetRandomToken(long runId,ClientAuth auth) throws IOException {
         JsonObject json = new JsonObject();
-        json.add("auth", ClientAuth.getInstance().createMessageJson());
-        json.addProperty("uuid", ClientAuth.getInstance().uuid.toString());
+        json.add("auth", auth.createMessageJson());
+        json.addProperty("uuid", auth.uuid.toString());
         json.addProperty("runId", runId);
         return makeRequest(json, ServerSideRNGConfig.GET_RANDOM_URL);
     }
@@ -232,10 +234,10 @@ public class IOUtils {
      * @see ServerSideRNGConfig#UPLOAD_HASH_URL
      * @author Void_X_Walker
      */
-    static void uploadHashToken(long runId, String hash) throws IOException {
+    static void uploadHashToken(long runId, String hash,ClientAuth auth) throws IOException {
         JsonObject json = new JsonObject();
-        json.add("auth", ClientAuth.getInstance().createMessageJson());
-        json.addProperty("uuid", ClientAuth.getInstance().uuid.toString());
+        json.add("auth", auth.createMessageJson());
+        json.addProperty("uuid", auth.uuid.toString());
         json.addProperty("hash", hash);
         json.addProperty("runId", runId);
         makeRequest(json, ServerSideRNGConfig.UPLOAD_HASH_URL);

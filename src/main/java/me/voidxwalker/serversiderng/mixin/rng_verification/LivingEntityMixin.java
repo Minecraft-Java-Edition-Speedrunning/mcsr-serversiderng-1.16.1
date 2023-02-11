@@ -39,7 +39,7 @@ public abstract class LivingEntityMixin extends Entity {
             cancellable = true,
             locals = LocalCapture.CAPTURE_FAILEXCEPTION
     )
-    private void modifyMobRandom(
+    private void serversiderng_modifyMobRandom(
             DamageSource source,
             boolean causedByPlayer,
             CallbackInfo ci,

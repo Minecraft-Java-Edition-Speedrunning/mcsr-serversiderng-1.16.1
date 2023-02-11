@@ -20,7 +20,7 @@ public class StrafePlayerPhaseMixin {
      * @author Void_X_Walker
      */
     @Redirect(method = "method_6861", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/boss/dragon/EnderDragonEntity;getRandom()Ljava/util/Random;"))
-    public Random modifyTargetHeight(EnderDragonEntity instance) {
+    public Random serversiderng_modifyTargetHeight(EnderDragonEntity instance) {
         return ServerSideRNG
                 .getRngContext(RNGHandler.RNGTypes.ENDER_DRAGON_TARGET_HEIGHT,null)
                 .map(Supplier::get)
@@ -38,7 +38,7 @@ public class StrafePlayerPhaseMixin {
                     to = @At(value = "INVOKE", target = "Lnet/minecraft/entity/boss/dragon/EnderDragonEntity;findPath(IILnet/minecraft/entity/ai/pathing/PathNode;)Lnet/minecraft/entity/ai/pathing/Path;")
             )
     )
-    public Random modifyDragonPath(EnderDragonEntity instance) {
+    public Random serversiderng_modifyDragonPath(EnderDragonEntity instance) {
         return ServerSideRNG
                 .getRngContext(RNGHandler.RNGTypes.ENDER_DRAGON_PATH)
                 .map(Supplier::get)

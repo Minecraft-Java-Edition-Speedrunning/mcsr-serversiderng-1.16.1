@@ -16,8 +16,9 @@ public class ServerSideRNGConfig {
     final static String START_RUN_URL = BASE_URL + "/startRun";
     final static String READ_ME_NAME = "readme.txt";
     final static String READ_ME = "Submit the Verification Zip File with the name the world you played your run in alongside your speedrun.com submission.\nMake sure not to alter the ZIP in any way, as that may lead your run becoming unverifiable.\nFor more information read this: https://github.com/VoidXWalker/serverSideRNG/blob/master/README.md.\nIf you have any problems or unanswered questions feel free to open a help thread in the Minecraft Java Edition Speedrunning Discord: https://discord.com/invite/jmdFn3C.";
-    final static long USE_TIME = 40000000000L; //40 seconds
-    final static long EXTRA_TIME = 10000000000L; //10 seconds
+    final static long HANDLER_USE_TIME = 40000000000L; //40 seconds
+    final static long HANDLER_EXTRA_TIME = 10000000000L; //10 seconds
+    final static long INITIALIZER_USE_TIME=30000000000L;
 
     final static long GRACE_PERIOD=3000000000L; // 3 seconds
     final static String VERIFICATION_FOLDER_HASH_ALG = "MD5";

@@ -33,7 +33,7 @@ public class BlockMixin {
             locals = LocalCapture.CAPTURE_FAILEXCEPTION,
             cancellable = true
     )
-    private static void modifyBlockDrops(
+    private static void serversiderng_modifyBlockDrops(
             BlockState state,
             ServerWorld world,
             BlockPos pos,

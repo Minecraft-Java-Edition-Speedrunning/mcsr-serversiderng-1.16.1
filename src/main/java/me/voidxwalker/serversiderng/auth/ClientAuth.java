@@ -18,6 +18,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.util.Base64;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -27,39 +28,35 @@ public class ClientAuth {
     final static String DIGEST_ALGORITHM = "SHA-256";
     final static String CERTIFICATE_URL = "https://api.minecraftservices.com/player/certificates";
 
-    String accessToken;
-    public UUID uuid;
-    Proxy proxy;
-    PlayerKeyPair pair;
+    public final UUID uuid;
+    private final PlayerKeyPair pair;
 
-    public static CompletableFuture<ClientAuth> clientAuthCompletableFuture;
+    private static CompletableFuture<ClientAuth> clientAuthCompletableFuture;
     private static ClientAuth instance;
+    public static void setClientAuthCompletableFuture(CompletableFuture<ClientAuth> future){
+        clientAuthCompletableFuture=future;
+    }
+    public static Optional<CompletableFuture<ClientAuth>> getClientAuthCompletableFuture(){
+        return Optional.ofNullable(clientAuthCompletableFuture);
+    }
     /**
      * Tries to update the {@link ClientAuth#instance} with the {@link ClientAuth} created by the {@link ClientAuth#clientAuthCompletableFuture} and returns it.
      * If the {@link ClientAuth#clientAuthCompletableFuture} is null however, or an error occurs, it tries to update and return the {@link ClientAuth#instance} synchronously using {@link ClientAuth#createClientAuth()}
      * @see ClientAuth#createClientAuth()
      * @return A {@link ClientAuth} {@code Object} that has been initialized and is ready for requests.
      */
-    public static ClientAuth getInstance() {
+    public static Optional<ClientAuth> getInstance() {
         if (ClientAuth.instance == null) {
-            if (ClientAuth.clientAuthCompletableFuture != null) {
-                try {
-                    ClientAuth.instance = clientAuthCompletableFuture.get();
-                    return ClientAuth.instance;
-                } catch (ExecutionException | InterruptedException ignored) {
-                }
-            }
-            ClientAuth.instance = ClientAuth.createClientAuth();
+            ClientAuth.getClientAuthCompletableFuture().ifPresent(clientAuthCompletableFuture1 -> ClientAuth.instance = clientAuthCompletableFuture1.getNow(null));
         }
-        return ClientAuth.instance;
+        return Optional.ofNullable(ClientAuth.instance);
     }
 
-
     ClientAuth() throws IOException {
-        this.accessToken = MinecraftClient.getInstance().getSession().getAccessToken();
+        String accessToken = MinecraftClient.getInstance().getSession().getAccessToken();
+        Proxy proxy = ((YggdrasilMinecraftSessionService)MinecraftClient.getInstance().getSessionService()).getAuthenticationService().getProxy();
+        this.pair = PlayerKeyPair.fetchKeyPair(readInputStream(postInternal(ClientAuth.constantURL(), new byte[0],accessToken,proxy)));
         this.uuid = MinecraftClient.getInstance().getSession().getProfile().getId();
-        this.proxy = ((YggdrasilMinecraftSessionService)MinecraftClient.getInstance().getSessionService()).getAuthenticationService().getProxy();
-        this.pair = PlayerKeyPair.fetchKeyPair(readInputStream(postInternal(ClientAuth.constantURL(), new byte[0])));
     }
 
     public static ClientAuth createClientAuth() {
@@ -141,8 +138,8 @@ public class ClientAuth {
         }
     }
 
-    HttpURLConnection postInternal(final URL url, final byte[] postAsBytes) throws IOException {
-        final HttpURLConnection connection = (HttpURLConnection) url.openConnection(this.proxy);
+    HttpURLConnection postInternal(final URL url, final byte[] postAsBytes,String accessToken,Proxy proxy) throws IOException {
+        final HttpURLConnection connection = (HttpURLConnection) url.openConnection(proxy);
         connection.setConnectTimeout(5000);
         connection.setReadTimeout(5000);
         connection.setUseCaches(false);
@@ -150,7 +147,7 @@ public class ClientAuth {
         try {
             connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
             connection.setRequestProperty("Content-Length", "" + postAsBytes.length);
-            connection.setRequestProperty("Authorization", "Bearer " + this.accessToken);
+            connection.setRequestProperty("Authorization", "Bearer " + accessToken);
             connection.setRequestMethod("POST");
             connection.setDoOutput(true);
             outputStream = connection.getOutputStream();

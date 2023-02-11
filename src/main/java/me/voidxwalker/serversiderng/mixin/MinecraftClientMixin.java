@@ -33,20 +33,20 @@ public class MinecraftClientMixin {
      * @author Void_X_Walker
      */
     @Inject(method = "render",at = @At("HEAD"))
-    public void trackLastInWorld(CallbackInfo ci){
+    public void serversiderng_trackLastInWorld(CallbackInfo ci){
         if(ServerSideRNGConfig.UPLOAD_ON_WORLD_LEAVE){
             serverSideRNG_lastInWorld=this.server!=null?System.nanoTime(): serverSideRNG_lastInWorld;
             if( System.nanoTime()-serverSideRNG_lastInWorld> ServerSideRNGConfig.TIME_OUT_OF_WORLD_BEFORE_AUTOUPLOAD){
-                if(ServerSideRNG.lastSession!=null){
+                ServerSideRNG.getLastSession().ifPresent(lastSession -> {
                     serverSideRNG_lastInWorld=Long.MAX_VALUE;
-                    IOUtils.getAndUploadHash(ServerSideRNG.lastSession.lastWorldFile, ServerSideRNG.lastSession.lastRunId);
-                }
+                    IOUtils.getAndUploadHash(lastSession.lastWorldFile, lastSession.lastRunId);
+                });
             }
 
         }
     }
     /**
-     * Updates the {@link RNGSession#currentRNGHandler} at the end of world generation, if the {@link RNGSession#rngHandlerCompletableFuture} has completed.
+     * Updates the {@code RNGSession.currentRNGHandler} at the end of world generation, if the {@code RNGSession.rngHandlerCompletableFuture} has completed.
      * @see RNGSession#getRngHandlerFromFuture()
      * @author Void_X_Walker
      */
@@ -54,24 +54,32 @@ public class MinecraftClientMixin {
             method = "startIntegratedServer(Ljava/lang/String;Lnet/minecraft/util/registry/RegistryTracker$Modifiable;Ljava/util/function/Function;Lcom/mojang/datafixers/util/Function4;ZLnet/minecraft/client/MinecraftClient$WorldLoadAction;)V",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/server/ServerNetworkIo;bindLocal()Ljava/net/SocketAddress;", shift = At.Shift.BEFORE)
     )
-    public void updateHandlerAfterWorldGen(CallbackInfo ci) {
-        RNGSession.getInstance().filter(rngSession -> rngSession.rngHandlerCompletableFuture.isDone()).ifPresent(RNGSession::getRngHandlerFromFuture);
-        RNGSession.getInstance().ifPresent(rngSession -> ServerSideRNG.lastSession= new ServerSideRNG.LastSession(
+    public void serversiderng_updateHandlerAfterWorldGen(CallbackInfo ci) {
+        RNGSession.getInstance().ifPresent(rngSession -> rngSession.getRngHandlerCompletableFuture().ifPresent(completableFuture ->{
+            if(completableFuture.isDone()){
+                rngSession.getRngHandlerCompletableFuture();
+            }
+        } ));
+        RNGSession.getInstance().ifPresent(rngSession -> ServerSideRNG.setLastSession(new ServerSideRNG.LastSession(
                 Objects.requireNonNull(MinecraftClient.getInstance().getServer())
                         .getSavePath(WorldSavePath.ROOT)
                         .toFile()
                         .getParentFile(), rngSession.runId)
-        );
+        ));
     }
     /**
-     * Tries to update the {@link RNGSession#currentRNGHandler} every game tick.
-     * Pauses the {@link RNGSession#currentRNGHandler} from making requests if th game is Paused and the time the player has spent in the world is smaller than {@code 2 seconds}.
+     * Tries to update the {@code RNGSession.currentRNGHandler} every game tick.
+     * Pauses the {@code RNGSession.currentRNGHandler} from making requests if th game is Paused and the time the player has spent in the world is smaller than {@code 2 seconds}.
      * @see RNGSession#updateRNGHandler()
      * @author Void_X_Walker
      */
     @Inject(method = "tick", at = @At("HEAD"))
-    public void tick(CallbackInfo ci) {
-        ServerSideRNG.getRNGInitializer().map(rngInitializer -> rngInitializer.outOfTime() ? rngInitializer : null).ifPresent(RNGInitializer::update);
+    public void serversiderng_tick(CallbackInfo ci) {
+        Optional<RNGInitializer> rngInitializerOptional= ServerSideRNG.getRNGInitializer();
+        if(rngInitializerOptional.filter(rngInitializer -> !rngInitializer.outOfTime()).isEmpty()){
+            RNGInitializer.update();
+        }
+        ServerSideRNG.getRNGInitializer().map(rngInitializer -> rngInitializer.outOfTime() ? rngInitializer : null).ifPresent(rngInitializer -> RNGInitializer.update());
         Optional<RNGSession> optional= RNGSession.getInstance();
         optional.ifPresent(rngSession -> {
             if(rngSession.isPaused()){
@@ -93,18 +101,16 @@ public class MinecraftClientMixin {
      * @author Void_X_Walker
      */
     @Inject(method = "stop",at = @At("HEAD"))
-    public void saveOnShutdown(CallbackInfo ci){
-        if(ServerSideRNG.lastSession!=null&&(this.server ==null|| RNGSession.inSession())){
-            long runId = ServerSideRNG.getRNGInitializer().flatMap(RNGInitializer::getInstance).map(rngSession -> rngSession.runId).orElse(ServerSideRNG.lastSession.lastRunId);
-            IOUtils.getAndUploadHash(ServerSideRNG.lastSession.lastWorldFile,runId);
-        }
+    public void serversiderng_saveOnShutdown(CallbackInfo ci){
+        ServerSideRNG.getLastSession().ifPresent(lastSession -> IOUtils.getAndUploadHash(lastSession.lastWorldFile,ServerSideRNG.getRNGInitializer().flatMap(RNGInitializer::getInstance).map(rngSession -> rngSession.runId).orElse(lastSession.lastRunId)));
+
     }
     /**
      * Tracks the time the player joins the world
      * @author Void_X_Walker
      */
     @Inject(method = "startIntegratedServer(Ljava/lang/String;Lnet/minecraft/util/registry/RegistryTracker$Modifiable;Ljava/util/function/Function;Lcom/mojang/datafixers/util/Function4;ZLnet/minecraft/client/MinecraftClient$WorldLoadAction;)V", at = @At(value = "TAIL"))
-    public void trackWorldRenderStart(CallbackInfo ci){
+    public void serversiderng_trackWorldRenderStart(CallbackInfo ci){
         ServerSideRNG.getRNGInitializer().flatMap(rngInitializer -> rngInitializer.getInstance().filter(RNGSession::inStartup)).ifPresent(RNGSession::joinWorld);
     }
 }

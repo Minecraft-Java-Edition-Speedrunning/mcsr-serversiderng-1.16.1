@@ -18,7 +18,7 @@ public class MinecraftServerMixin {
      * @author Void_X_Walker
      */
     @Inject(method = "tick",at = @At("HEAD"))
-    public void upload(BooleanSupplier shouldKeepTicking, CallbackInfo ci){
+    public void serversiderng_upload(BooleanSupplier shouldKeepTicking, CallbackInfo ci){
         RNGSession.getInstance().filter(rngSession -> ServerSideRNG.needsUpload()).ifPresent(rngSession -> IOUtils.uploadHash(rngSession.runId));
     }
 }

@@ -26,22 +26,34 @@ public class ServerSideRNG implements ClientModInitializer {
 
     private static final Logger LOGGER = LogManager.getLogger("ServerSideRNG");
 
-    public static LastSession lastSession;
+    private static LastSession lastSession;
 
     static AtomicBoolean impendingUpload= new AtomicBoolean(false);
-    static CompletableFuture<RNGInitializer> rngInitializerCompletableFuture;
-    public static RNGInitializer currentInitializer;
+    private static CompletableFuture<Optional<RNGInitializer>> rngInitializerCompletableFuture;
+    private static RNGInitializer currentInitializer;
 
     public static boolean needsUpload(){
         return impendingUpload.getAndSet(false);
     }
-    public void setRNGSession(RNGSession session){
-        this.instance=session;
+    public static Optional<LastSession> getLastSession(){
+        return Optional.ofNullable(lastSession);
+    }
+    public static void setLastSession(LastSession session){
+        lastSession=session;
+    }
+    protected static void setCurrentInitializer(RNGInitializer initializer){
+        currentInitializer=initializer;
+    }
+    protected static Optional<CompletableFuture<Optional<RNGInitializer>>> getRngInitializerCompletableFuture(){
+        return Optional.ofNullable(rngInitializerCompletableFuture);
+    }
+    protected static void setRngInitializerCompletableFuture(CompletableFuture<Optional<RNGInitializer>> future){
+        rngInitializerCompletableFuture=future;
     }
 
     public static Optional<Supplier<Long>> getRngContext(RNGHandler.RNGTypes type, @Nullable String subType) {
         return getRNGInitializer().flatMap(RNGInitializer::getInstance)
-            .map(RNGSession::getCurrentRNGHandler)
+            .flatMap(RNGSession::getAndUpdateCurrentRNGHandler)
             .map((it) ->()-> it.getRngValue(type,subType));
     }
     public static Optional<RNGInitializer> getRNGInitializer(){
@@ -50,25 +62,6 @@ public class ServerSideRNG implements ClientModInitializer {
 
     public static Optional<Supplier<Long>> getRngContext(RNGHandler.RNGTypes type) {
         return getRngContext(type,null);
-    }
-    /**
-     * Starts a new {@link RNGSession}.
-     * If a new {@link RNGSession} has already been created async via the {@link ServerSideRNG#rngSessionCompletableFuture} it will be retrieved via the {@link CompletableFuture#get()} method.
-     * In case of a failure, a new RNGSession will be created synchronously which could lead to noticeable lag.
-     * @author Void_X_Walker
-     */
-    public static void startRNGSession() {
-        if (rngSessionCompletableFuture != null) {
-            instance = rngSessionCompletableFuture.getNow(null);
-        }
-        else {
-            instance = createRNGSession();
-            ServerSideRNG.log(Level.WARN,"Started RNGSession sync!");
-        }
-        if (instance != null) {
-            ServerSideRNG.log(Level.INFO, "Started RNGSession for runID = " + instance.runId);
-        }
-        rngSessionCompletableFuture = CompletableFuture.supplyAsync(RNGInitializer::createRNGSession);
     }
     /**
      * Adds an event to the {@code onComplete} listener of <a href="https://github.com/RedLime/SpeedRunIGT">SpeedRunIGT</a> that fires at run completion.
@@ -86,7 +79,7 @@ public class ServerSideRNG implements ClientModInitializer {
                         .invoke(null,(Consumer<Object>) o -> new Timer().schedule(new TimerTask() {
                             @Override
                             public void run() {
-                                if(RNGInitializer.inSession()){
+                                if( RNGSession.inSession()){
                                    impendingUpload.set(true);
                                 }
                             }
@@ -97,8 +90,8 @@ public class ServerSideRNG implements ClientModInitializer {
             e.printStackTrace();
         }
         CompletableFuture.runAsync(IOUtils::prepareVerificationFolder);
-        ClientAuth.clientAuthCompletableFuture = CompletableFuture.supplyAsync(ClientAuth::createClientAuth);
-        RNGInitializer.rngSessionCompletableFuture = CompletableFuture.supplyAsync(RNGInitializer::createRNGSession);
+        ClientAuth.setClientAuthCompletableFuture( CompletableFuture.supplyAsync(ClientAuth::createClientAuth));
+        ServerSideRNG.setRngInitializerCompletableFuture( CompletableFuture.supplyAsync(RNGInitializer::createRNGInitializer));
     }
     public static void log(Level level,String message){
         LOGGER.log(level,message);
@@ -111,9 +104,7 @@ public class ServerSideRNG implements ClientModInitializer {
      */
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         dispatcher.register( CommandManager.literal("serversiderng_uploadRun").executes(context -> {
-            if(RNGInitializer.inSession()){
-                IOUtils.uploadHash(RNGInitializer.getInstance().runId);
-            }
+            RNGSession.getInstance().ifPresent(rngInitializer -> IOUtils.uploadHash(rngInitializer.runId));
             return 1;
         }));
     }
