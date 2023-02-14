@@ -1,6 +1,7 @@
 package me.voidxwalker.serversiderng.mixin;
 
 import me.voidxwalker.serversiderng.IOUtils;
+import me.voidxwalker.serversiderng.RNGInitializer;
 import me.voidxwalker.serversiderng.RNGSession;
 import me.voidxwalker.serversiderng.ServerSideRNG;
 import net.minecraft.server.MinecraftServer;
@@ -22,5 +23,9 @@ public class MinecraftServerMixin {
     @Inject(method = "tick",at = @At("HEAD"))
     public void serversiderng_upload(BooleanSupplier shouldKeepTicking, CallbackInfo ci){
         RNGSession.getInstance().filter(rngSession -> ServerSideRNG.needsUpload()).ifPresent(rngSession -> IOUtils.uploadHash(rngSession.runId));
+    }
+    @Inject(method = "<init>",at = @At("TAIL"))
+    public void serversiderng_worldGenerationStart(CallbackInfo ci){
+        RNGInitializer.setPaused(false);
     }
 }

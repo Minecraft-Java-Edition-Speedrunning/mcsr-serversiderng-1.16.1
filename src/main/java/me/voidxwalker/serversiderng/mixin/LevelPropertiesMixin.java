@@ -32,7 +32,12 @@ public class LevelPropertiesMixin {
         RNGSession.getInstance().ifPresentOrElse(rngSession -> {
             compoundTag.putLong("serversiderng-runid", rngSession.runId);
             serversiderng_cachedRunID = rngSession.runId;
-        },() -> compoundTag.putLong("serversiderng-runid", serversiderng_cachedRunID));
+        },() -> {
+            if(serversiderng_cachedRunID!=null){
+                compoundTag.putLong("serversiderng-runid", serversiderng_cachedRunID);
+            }
+
+        });
     }
     /**
      * Creates a new {@link RNGSession} from the {@link RNGSession#runId} stored in the level.dat file.

@@ -107,7 +107,7 @@ public class RNGHandler {
      * @author Void_X_Walker
      */
     public boolean outOfExtraTime() {
-        return System.nanoTime() - startTime < ServerSideRNGConfig.HANDLER_USE_TIME + ServerSideRNGConfig.HANDLER_EXTRA_TIME;
+        return System.nanoTime() - startTime > ServerSideRNGConfig.HANDLER_USE_TIME + ServerSideRNGConfig.HANDLER_EXTRA_TIME;
     }
     /**
      * The Random Generators that get replaced with Generators on the {@code Verification-Server}

@@ -12,6 +12,7 @@ import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Optional;
 import java.util.Timer;
@@ -90,8 +91,12 @@ public class ServerSideRNG implements ClientModInitializer {
             e.printStackTrace();
         }
         CompletableFuture.runAsync(IOUtils::prepareVerificationFolder);
-        ClientAuth.setClientAuthCompletableFuture( CompletableFuture.supplyAsync(ClientAuth::createClientAuth));
-        ServerSideRNG.setRngInitializerCompletableFuture( CompletableFuture.supplyAsync(RNGInitializer::createRNGInitializer));
+        ClientAuth.setClientAuthCompletableFuture( CompletableFuture.supplyAsync(()->{
+            Optional<ClientAuth> auth = ClientAuth.createClientAuth();
+            ServerSideRNG.setRngInitializerCompletableFuture( CompletableFuture.supplyAsync(RNGInitializer::createRNGInitializer));
+            return auth;
+        } ));
+
     }
     public static void log(Level level,String message){
         LOGGER.log(level,message);

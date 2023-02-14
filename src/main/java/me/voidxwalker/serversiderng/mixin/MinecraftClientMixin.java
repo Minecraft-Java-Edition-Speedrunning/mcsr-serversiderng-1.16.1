@@ -45,15 +45,12 @@ public class MinecraftClientMixin {
                 IOUtils.getAndUploadHash(lastSession.lastWorldFile, lastSession.lastRunId);
             });
         }
-        if(System.nanoTime()-serverSideRNG_lastInWorld> ServerSideRNGConfig.TIME_OUT_OF_WORLD_BEFORE_PAUSE){
+        if(this.server==null&&System.nanoTime()-serverSideRNG_lastInWorld> ServerSideRNGConfig.TIME_OUT_OF_WORLD_BEFORE_PAUSE&&!RNGInitializer.getPaused()){
             RNGInitializer.setPaused(true);
         }
 
     }
-    @Inject(method = "startIntegratedServer(Ljava/lang/String;Lnet/minecraft/util/registry/RegistryTracker$Modifiable;Ljava/util/function/Function;Lcom/mojang/datafixers/util/Function4;ZLnet/minecraft/client/MinecraftClient$WorldLoadAction;)V",at = @At("HEAD"))
-    public void serversiderng_worldGenerationStart(CallbackInfo ci){
-        RNGInitializer.setPaused(false);
-    }
+
     /**
      * Updates the {@code RNGSession.currentRNGHandler} at the end of world generation, if the {@code RNGSession.rngHandlerCompletableFuture} has completed.
      * @see RNGSession#getRngHandlerFromFuture()
@@ -88,7 +85,7 @@ public class MinecraftClientMixin {
         if(rngInitializerOptional.filter(rngInitializer -> !rngInitializer.outOfTime()).isEmpty()){
             RNGInitializer.update();
         }
-        ServerSideRNG.getRNGInitializer().map(rngInitializer -> rngInitializer.outOfTime() ? rngInitializer : null).ifPresent(rngInitializer -> RNGInitializer.update());
+        ServerSideRNG.getRNGInitializer().filter(RNGInitializer::outOfTime).ifPresent(rngInitializer -> RNGInitializer.update());
         Optional<RNGSession> optional= RNGSession.getInstance();
         optional.ifPresent(rngSession -> {
             if(rngSession.isPaused()){

@@ -23,6 +23,7 @@ public class ServerSideRNGConfig {
 
     final static long GRACE_PERIOD=3000000000L; // 3 seconds
     final static String VERIFICATION_FOLDER_HASH_ALG = "MD5";
+    static final long INITIALIZR_UPDATE_COOLDOWN_TIME =10000000000L;
     public static boolean UPLOAD_ON_SEED=true;
     public static boolean UPLOAD_ON_SHUTDOWN=true;
     public static boolean UPLOAD_ON_WORLD_LEAVE=true;

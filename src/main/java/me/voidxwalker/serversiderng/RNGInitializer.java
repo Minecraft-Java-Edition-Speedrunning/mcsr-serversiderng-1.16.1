@@ -25,7 +25,11 @@ public class RNGInitializer {
         this.runId=runId;
     }
     public static void setPaused(boolean paused){
+        System.out.println("paused"+paused);
         pauseUpdates=paused;
+    }
+    public static boolean getPaused(){
+        return pauseUpdates;
     }
     public void setSession(RNGSession session){
         this.instance=session;
@@ -98,13 +102,17 @@ public class RNGInitializer {
         return System.nanoTime() - startTime > ServerSideRNGConfig.INITIALIZER_USE_TIME;
     }
 
+    static long lastUpdateTime;
+
     public static void update(){
-        if(!RNGSession.inSession()&&!pauseUpdates){
+        if(!RNGSession.inSession()&&!getPaused()&&System.nanoTime()-lastUpdateTime> ServerSideRNGConfig.INITIALIZR_UPDATE_COOLDOWN_TIME){
+            lastUpdateTime=System.nanoTime();
             ServerSideRNG.getRngInitializerCompletableFuture().ifPresentOrElse(completableFuture -> completableFuture.getNow(Optional.empty()).ifPresent(rngInitializer -> {
                 rngInitializer.activate();
                 ServerSideRNG.setCurrentInitializer(rngInitializer);
             }),()->ServerSideRNG.log(Level.WARN,"Failed to update RNGInitializer!") );
             ServerSideRNG.setRngInitializerCompletableFuture( CompletableFuture.supplyAsync(RNGInitializer::createRNGInitializer));
+            ServerSideRNG.getRNGInitializer().ifPresent(RNGInitializer::activate);
         }
     }
 }

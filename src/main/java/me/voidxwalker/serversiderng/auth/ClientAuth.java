@@ -25,7 +25,7 @@ public class ClientAuth {
     final static String SIGNATURE_ALGORITHM = "SHA256withRSA";
     final static String DIGEST_ALGORITHM = "SHA-256";
     final static String CERTIFICATE_URL = "https://api.minecraftservices.com/player/certificates";
-    final static long LOCK_TIMEOUT= 15000000000L; //15 seconds
+    final static long LOCK_TIMEOUT= 100000000000L; //100 seconds
     public UUID uuid;
     PlayerKeyPair pair;
 
@@ -57,16 +57,21 @@ public class ClientAuth {
     public static Optional<ClientAuth> executeWithLock(Executable<ClientAuth> executable, long timeout) throws Exception{
         long startTime = System.nanoTime();
         while (System.nanoTime()-startTime<timeout) {
-                String lockFileName = "serversiderng-clientlock-" + UUID.randomUUID();
-                File lockFile = File.createTempFile(lockFileName, null);
+                String lockFileName = "serversiderng-clientlock";
+                File lockFile = new File(lockFileName);
 
                 RandomAccessFile lockAccessFile = new RandomAccessFile(lockFile, "rw");
-                FileLock lock = lockAccessFile.getChannel().tryLock();
-                if (lock != null) {
+                FileLock lock =null;
+                try{
+                   lock =lockAccessFile.getChannel().tryLock();
+                } catch (Exception ignored) {
 
-                    Thread.sleep(500);
+                }
+            if (lock != null) {
                     Optional<ClientAuth> optional =Optional.ofNullable( executable.get());
+                    Thread.sleep(3000);
                     lock.release();
+
                     lockAccessFile.close();
                     lockFile.delete();
                     return optional;
