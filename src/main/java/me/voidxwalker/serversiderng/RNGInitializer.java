@@ -17,15 +17,16 @@ public class RNGInitializer {
     private final long runId;
     private final Random initializer;
     private static boolean pauseUpdates;
+    private int sessionIndex;
     public RNGInitializer(JsonObject jsonObject) throws Throwable {
-        this(Optional.ofNullable(jsonObject.get("seed")).orElseThrow((Supplier<Throwable>)() -> new IllegalArgumentException("Invalid JsonObject!")).getAsLong(),Optional.ofNullable(jsonObject.get("runId")).orElseThrow((Supplier<Throwable>)() -> new IllegalArgumentException("Invalid JsonObject!")).getAsLong());
+        this(Optional.ofNullable(jsonObject.get("random")).orElseThrow((Supplier<Throwable>)() -> new IllegalArgumentException("Invalid JsonObject!")).getAsLong(),Optional.ofNullable(jsonObject.get("runId")).orElseThrow((Supplier<Throwable>)() -> new IllegalArgumentException("Invalid JsonObject!")).getAsLong());
     }
     public RNGInitializer(long seed,long runId){
         initializer=new Random(seed);
         this.runId=runId;
     }
     public static void setPaused(boolean paused){
-        System.out.println("paused"+paused);
+        ServerSideRNG.log(Level.INFO,paused?"Paused RNGInitializer updates":"Unpaused RNGInitializer updates");
         pauseUpdates=paused;
     }
     public static boolean getPaused(){
@@ -53,13 +54,13 @@ public class RNGInitializer {
     public void startRNGSession() {
         RNGSession session=createRNGSession();
         instance=session;
-        ServerSideRNG.log(Level.INFO, "Started RNGSession for runID = " + session.runId);
+        ServerSideRNG.log(Level.INFO, "Started RNGSession [" + session.runId+";"+session.sessionIndex+"]");
     }
     /**
      * Creates a new {@link RNGSession} using the {@code StartRun} token obtained from the {@code Verification-Server}.
      * This method should be called asynchronous due to the delay associated with the request.
      * @return a new {@link RNGSession} or {@code null} if an {@link IOException} occurred when making the request
-     * @see  RNGSession#RNGSession(JsonObject)
+     * @see  RNGSession#RNGSession(long,int)
      * @see IOUtils#getStartRunToken(me.voidxwalker.serversiderng.auth.ClientAuth)
      * @author Void_X_Walker
      */
@@ -67,7 +68,7 @@ public class RNGInitializer {
         if(initializer==null){
             return null;
         }
-        return new RNGSession(runId,initializer.nextLong());
+        return new RNGSession(runId,initializer.nextLong(),sessionIndex++);
     }
     public static Optional<RNGInitializer> createRNGInitializer(){
         try {
@@ -103,16 +104,19 @@ public class RNGInitializer {
     }
 
     static long lastUpdateTime;
-
     public static void update(){
+        lastUpdateTime=System.nanoTime();
+        ServerSideRNG.getRngInitializerCompletableFuture().ifPresentOrElse(completableFuture -> completableFuture.getNow(Optional.empty()).ifPresent(rngInitializer -> {
+            rngInitializer.activate();
+            ServerSideRNG.log(Level.WARN,"Updating RNGInitializer!");
+            ServerSideRNG.setCurrentInitializer(rngInitializer);
+        }),()->ServerSideRNG.log(Level.WARN,"Failed to update RNGInitializer!") );
+        ServerSideRNG.setRngInitializerCompletableFuture( CompletableFuture.supplyAsync(RNGInitializer::createRNGInitializer));
+        ServerSideRNG.getRNGInitializer().ifPresent(RNGInitializer::activate);
+    }
+    public static void tryUpdate(){
         if(!RNGSession.inSession()&&!getPaused()&&System.nanoTime()-lastUpdateTime> ServerSideRNGConfig.INITIALIZR_UPDATE_COOLDOWN_TIME){
-            lastUpdateTime=System.nanoTime();
-            ServerSideRNG.getRngInitializerCompletableFuture().ifPresentOrElse(completableFuture -> completableFuture.getNow(Optional.empty()).ifPresent(rngInitializer -> {
-                rngInitializer.activate();
-                ServerSideRNG.setCurrentInitializer(rngInitializer);
-            }),()->ServerSideRNG.log(Level.WARN,"Failed to update RNGInitializer!") );
-            ServerSideRNG.setRngInitializerCompletableFuture( CompletableFuture.supplyAsync(RNGInitializer::createRNGInitializer));
-            ServerSideRNG.getRNGInitializer().ifPresent(RNGInitializer::activate);
+            update();
         }
     }
 }

@@ -1,18 +1,12 @@
 package me.voidxwalker.serversiderng.mixin;
 
-import com.mojang.datafixers.util.Function4;
 import me.voidxwalker.serversiderng.*;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.GameMenuScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.world.ClientWorld;
-import net.minecraft.resource.DataPackSettings;
-import net.minecraft.resource.ResourceManager;
 import net.minecraft.server.integrated.IntegratedServer;
 import net.minecraft.util.WorldSavePath;
-import net.minecraft.util.registry.RegistryTracker;
-import net.minecraft.world.SaveProperties;
-import net.minecraft.world.level.storage.LevelStorage;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -23,7 +17,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.io.File;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Function;
 
 @Mixin(MinecraftClient.class)
 public class MinecraftClientMixin {
@@ -83,9 +76,8 @@ public class MinecraftClientMixin {
     public void serversiderng_tick(CallbackInfo ci) {
         Optional<RNGInitializer> rngInitializerOptional= ServerSideRNG.getRNGInitializer();
         if(rngInitializerOptional.filter(rngInitializer -> !rngInitializer.outOfTime()).isEmpty()){
-            RNGInitializer.update();
+            RNGInitializer.tryUpdate();
         }
-        ServerSideRNG.getRNGInitializer().filter(RNGInitializer::outOfTime).ifPresent(rngInitializer -> RNGInitializer.update());
         Optional<RNGSession> optional= RNGSession.getInstance();
         optional.ifPresent(rngSession -> {
             if(rngSession.isPaused()){
@@ -95,7 +87,7 @@ public class MinecraftClientMixin {
                 }
             }
             else {
-                if(!this.paused){
+                if(!this.paused&& rngSession.isPaused()){
                     rngSession.setPaused(false);
                 }
             }

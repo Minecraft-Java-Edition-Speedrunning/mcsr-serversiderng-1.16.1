@@ -11,6 +11,7 @@ import java.util.concurrent.TimeUnit;
 public class RNGSession {
     private SessionState sessionState;
     public final long runId;
+    public final int sessionIndex;
 
     private long worldJoinTime;
     private int handlerIndex;
@@ -27,19 +28,9 @@ public class RNGSession {
     public static Optional<RNGSession> getInstance(){
         return   ServerSideRNG.getRNGInitializer().flatMap(RNGInitializer::getInstance);
     }
-    /**
-     * Creates new {@link RNGSession} from the provided {@link JsonObject}, which should have been retrieved from the {@code Verification-Server}.
-     * The {@code random} {@code Long} property of the {@link JsonObject} will be used to initialize the {@link RNGSession#currentRNGHandler} and {@link RNGSession#backupRandom}.
-     * The order of {@link Random#nextLong()} calls should not be tampered with as to not disrupt any Verification Tools.
-     * @param startRunToken A {@link JsonObject} containing a {@code runId} {@code Long} property and a {@code random} {@code Long} property.
-     * @see RNGHandler#RNGHandler(long)
-     * @author Void_X_Walker
-     */
-    RNGSession(JsonObject startRunToken) {
-        this(startRunToken.get("runId").getAsLong(),startRunToken.get("random").getAsLong());
-    }
-    RNGSession(long runId, long seed) {
+    RNGSession(long runId, long seed,int sessionIndex) {
         this.runId = runId;
+        this.sessionIndex=sessionIndex;
         sessionState=SessionState.STARTUP;
         Random random = new Random(seed);
 
@@ -56,15 +47,16 @@ public class RNGSession {
      * @param runId the {@code Long} that will be used as
      * @author Void_X_Walker
      */
-    public RNGSession(long runId) {
+    public RNGSession(long runId,int sessionIndex) {
         this.runId = runId;
+        this.sessionIndex=sessionIndex;
         sessionState=SessionState.STARTUP;
         currentRNGHandler = null;
         rngHandlerCompletableFuture = CompletableFuture.supplyAsync(()-> RNGHandler.createRNGHandler(runId));
         backupRandom = null;
     }
     public void log(Level level,String message){
-        ServerSideRNG.log(level,"["+this.runId+"]"+message);
+        ServerSideRNG.log(level,"["+this.runId+";"+this.sessionIndex+"]"+message);
     }
     private Optional<RNGHandler> getCurrentRNGHandler(){
         return Optional.ofNullable(currentRNGHandler);
@@ -101,11 +93,19 @@ public class RNGSession {
     public void updateRNGHandler() {
         getCurrentRNGHandler().ifPresentOrElse(
                 rngHandler -> {
-                    getRngHandlerCompletableFuture().ifPresentOrElse(ignored -> {}, ()->setRngHandlerCompletableFuture( CompletableFuture.supplyAsync(()-> RNGHandler.createRNGHandler(runId))));
-                    rngHandler.log(Level.INFO,"Current RNGHandler ran out of time, updating it!");
-                    getRngHandlerFromFuture();
+                    if(rngHandler.outOfNormalTime()){
+                        getRngHandlerCompletableFuture().ifPresentOrElse(ignored -> {}, ()->{
+                            System.out.println("updated future 1");
+                            setRngHandlerCompletableFuture( CompletableFuture.supplyAsync(()-> RNGHandler.createRNGHandler(runId)));
+                        });
+                        if(getRngHandlerCompletableFuture().map(rngHandlerCompletableFuture1 -> rngHandlerCompletableFuture1.isDone()||rngHandler.outOfExtraTime()).orElse(false)){
+                            rngHandler.log(Level.INFO,"Current RNGHandler ran out of time, updating it!");
+                            getRngHandlerFromFuture();
+                        }
+                    }
                 },
                 ()-> {
+                    System.out.println("updated future 2");
                     getRngHandlerCompletableFuture().ifPresentOrElse(ignored -> {},()->setRngHandlerCompletableFuture(CompletableFuture.supplyAsync(()-> RNGHandler.createRNGHandler(runId))));
                     getRngHandlerFromFuture();
                 }
@@ -149,29 +149,36 @@ public class RNGSession {
      * @author Void_X_Walker
      */
     public void getRngHandlerFromFuture() {
+        Optional<RNGHandler> obtainedRNGHandler;
         try {
-            setCurrentRNGHandler(
-                    getRngHandlerCompletableFuture()
-                            .orElseThrow(IllegalStateException::new)
-                            .get(1L, TimeUnit.SECONDS)
-                            .orElse(getBackupRandom()
-                                    .map(random -> {
-                                        RNGHandler handler = new RNGHandler(random.nextLong());
-                                        handler.log(Level.WARN, "Using RNGHandler created by the backup Random!");
-                                        return handler;
-                                    }).orElseThrow(IllegalStateException::new)
-                            )
-            );
+            obtainedRNGHandler=getRngHandlerCompletableFuture().orElseThrow(IllegalStateException::new).get(1L, TimeUnit.SECONDS);
+        } catch (Throwable e) {
+            log(Level.WARN, "Failed to update the current RNGHandler from future!");
+            e.printStackTrace();
+            obtainedRNGHandler=Optional.empty();
+        }
+        try {
+            if(obtainedRNGHandler.isPresent()){
+                setCurrentRNGHandler(obtainedRNGHandler.get());
+            }
+            else {
+                setCurrentRNGHandler(
+                        getBackupRandom()
+                                .map(random -> {
+                                    RNGHandler handler = new RNGHandler(random.nextLong());
+                                    handler.log(Level.WARN, "Using RNGHandler created by the backup Random!");
+                                    return handler;
+                                }).orElseThrow(IllegalStateException::new));
+            }
             getCurrentRNGHandler().ifPresent(rngHandler -> {
                 rngHandler.activate(handlerIndex++);
                 rngHandler.log(Level.INFO,"Successfully updated the current RNGHandler!");
             });
-
-        } catch (Throwable e) {
-            log(Level.WARN, "Failed to update the current RNGHandler!");
-            e.printStackTrace();
+        } catch (IllegalStateException e) {
+            log(Level.WARN, "Failed to update the current RNGHandler from backup Random!");
         }
-        rngHandlerCompletableFuture = CompletableFuture.supplyAsync(()-> RNGHandler.createRNGHandler(runId));
+
+        setRngHandlerCompletableFuture(CompletableFuture.supplyAsync(()-> RNGHandler.createRNGHandler(runId)));
     }
     /**
      * STARTUP = World creation

@@ -23,25 +23,31 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(LevelProperties.class)
 public class LevelPropertiesMixin {
     @Unique private Long serversiderng_cachedRunID;
+    @Unique private Integer serversiderng_cachedSessionIndex;
     /**
-     * Saves the {@link RNGSession#runId} to the level.dat file.
+     * Saves the {@link RNGSession#runId} and {@link RNGSession#sessionIndex} to the level.dat file.
      * @author Void_X_Walker
      */
     @Inject(method = "updateProperties", at = @At("TAIL"))
     public void serversiderng_saveRunId(RegistryTracker registryTracker, CompoundTag compoundTag, CompoundTag compoundTag2, CallbackInfo ci) {
         RNGSession.getInstance().ifPresentOrElse(rngSession -> {
             compoundTag.putLong("serversiderng-runid", rngSession.runId);
+            compoundTag.putLong("serversiderng-cachedSessionIndex", rngSession.sessionIndex);
             serversiderng_cachedRunID = rngSession.runId;
+            serversiderng_cachedSessionIndex=rngSession.sessionIndex;
         },() -> {
             if(serversiderng_cachedRunID!=null){
                 compoundTag.putLong("serversiderng-runid", serversiderng_cachedRunID);
+            }
+            if(serversiderng_cachedSessionIndex!=null){
+                compoundTag.putLong("serversiderng-cachedSessionIndex", serversiderng_cachedSessionIndex);
             }
 
         });
     }
     /**
      * Creates a new {@link RNGSession} from the {@link RNGSession#runId} stored in the level.dat file.
-     * @see RNGSession#RNGSession(long)
+     * @see RNGSession#RNGSession(long,int)
      * @author Void_X_Walker
      */
     @Inject(method = "method_29029", at = @At("HEAD"))
@@ -57,8 +63,10 @@ public class LevelPropertiesMixin {
             CallbackInfoReturnable<LevelProperties> cir
     ) {
         dynamic.get("serversiderng-runid").asNumber().result().ifPresentOrElse(
-                number -> ServerSideRNG.getRNGInitializer().ifPresent(
-                        rngInitializer -> rngInitializer.setSession(new RNGSession(number.longValue()))
+                number ->  dynamic.get("serversiderng-runid").asNumber().result().ifPresentOrElse(
+                        number1 ->ServerSideRNG.getRNGInitializer().ifPresent(
+                                rngInitializer -> rngInitializer.setSession(new RNGSession(number.longValue(),number1.intValue()))),
+                                ()-> ServerSideRNG.log(Level.INFO,"Failed to load RunID from file!")
                 ),
                 ()-> ServerSideRNG.log(Level.INFO,"Failed to load RunID from file!"));
     }
