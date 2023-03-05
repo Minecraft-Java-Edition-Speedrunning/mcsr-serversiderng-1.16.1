@@ -124,7 +124,6 @@ public class IOUtils {
                     response.append(inputLine);
                 }
             }
-            System.out.println(response.toString());
             return new JsonParser().parse(response.toString()).getAsJsonObject();
         }
         throw new IOException(""+httpURLConnection.getResponseCode());

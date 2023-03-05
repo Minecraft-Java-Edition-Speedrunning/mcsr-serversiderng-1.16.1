@@ -95,7 +95,6 @@ public class RNGSession {
                 rngHandler -> {
                     if(rngHandler.outOfNormalTime()){
                         getRngHandlerCompletableFuture().ifPresentOrElse(ignored -> {}, ()->{
-                            System.out.println("updated future 1");
                             setRngHandlerCompletableFuture( CompletableFuture.supplyAsync(()-> RNGHandler.createRNGHandler(runId)));
                         });
                         if(getRngHandlerCompletableFuture().map(rngHandlerCompletableFuture1 -> rngHandlerCompletableFuture1.isDone()||rngHandler.outOfExtraTime()).orElse(false)){
@@ -105,7 +104,6 @@ public class RNGSession {
                     }
                 },
                 ()-> {
-                    System.out.println("updated future 2");
                     getRngHandlerCompletableFuture().ifPresentOrElse(ignored -> {},()->setRngHandlerCompletableFuture(CompletableFuture.supplyAsync(()-> RNGHandler.createRNGHandler(runId))));
                     getRngHandlerFromFuture();
                 }
