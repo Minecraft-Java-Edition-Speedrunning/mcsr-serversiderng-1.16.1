@@ -8,67 +8,95 @@ import net.minecraft.client.MinecraftClient;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.Level;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.Proxy;
 import java.net.URL;
+import java.nio.channels.FileLock;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.util.Base64;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 public class ClientAuth {
     final static String SIGNATURE_ALGORITHM = "SHA256withRSA";
     final static String DIGEST_ALGORITHM = "SHA-256";
     final static String CERTIFICATE_URL = "https://api.minecraftservices.com/player/certificates";
-
-    String accessToken;
+    final static long LOCK_TIMEOUT= 100000000000L; //100 seconds
     public UUID uuid;
-    Proxy proxy;
     PlayerKeyPair pair;
 
-    public static CompletableFuture<ClientAuth> clientAuthCompletableFuture;
+    private static CompletableFuture<Optional<ClientAuth>> clientAuthCompletableFuture;
     private static ClientAuth instance;
+    public static void log(Level level,String message){
+        ServerSideRNG.log(level,"(ClientAuth) "+message);
+    }
+    public static void setClientAuthCompletableFuture(CompletableFuture<Optional<ClientAuth>> future){
+        clientAuthCompletableFuture=future;
+    }
+    public static Optional<CompletableFuture<Optional<ClientAuth>>> getClientAuthCompletableFuture(){
+        return Optional.ofNullable(clientAuthCompletableFuture);
+    }
     /**
      * Tries to update the {@link ClientAuth#instance} with the {@link ClientAuth} created by the {@link ClientAuth#clientAuthCompletableFuture} and returns it.
-     * If the {@link ClientAuth#clientAuthCompletableFuture} is null however, or an error occurs, it tries to update and return the {@link ClientAuth#instance} synchronously using {@link ClientAuth#createClientAuth()}
      * @see ClientAuth#createClientAuth()
      * @return A {@link ClientAuth} {@code Object} that has been initialized and is ready for requests.
      */
-    public static ClientAuth getInstance() {
+    public static Optional<ClientAuth> getInstance() {
         if (ClientAuth.instance == null) {
-            if (ClientAuth.clientAuthCompletableFuture != null) {
-                try {
-                    ClientAuth.instance = clientAuthCompletableFuture.get();
-                    return ClientAuth.instance;
-                } catch (ExecutionException | InterruptedException ignored) {
-                }
-            }
-            ClientAuth.instance = ClientAuth.createClientAuth();
+            ClientAuth.getClientAuthCompletableFuture().ifPresent(clientAuthCompletableFuture1 -> ClientAuth.instance = clientAuthCompletableFuture1.getNow(Optional.empty()).orElseGet(()->{
+                setClientAuthCompletableFuture( CompletableFuture.supplyAsync(ClientAuth::createClientAuth));
+                return null;
+            }));
         }
-        return ClientAuth.instance;
+        return Optional.ofNullable(ClientAuth.instance);
+    }
+    public static Optional<ClientAuth> executeWithLock(Executable<ClientAuth> executable, long timeout) throws Exception{
+        long startTime = System.nanoTime();
+        while (System.nanoTime()-startTime<timeout) {
+                String lockFileName = "serversiderng-clientlock";
+                File lockFile = new File(lockFileName);
+
+                RandomAccessFile lockAccessFile = new RandomAccessFile(lockFile, "rw");
+                FileLock lock =null;
+                try{
+                   lock =lockAccessFile.getChannel().tryLock();
+                } catch (Exception ignored) {
+
+                }
+            if (lock != null) {
+                    Optional<ClientAuth> optional =Optional.ofNullable( executable.get());
+                    Thread.sleep(3000);
+                    lock.release();
+
+                    lockAccessFile.close();
+                    lockFile.delete();
+                    return optional;
+                } else {
+                    lockAccessFile.close();
+
+                }
+        }
+        throw new IOException("Exceeded Lock Timeout!");
     }
 
 
     ClientAuth() throws IOException {
-        this.accessToken = MinecraftClient.getInstance().getSession().getAccessToken();
+        String accessToken = MinecraftClient.getInstance().getSession().getAccessToken();
+        Proxy proxy = ((YggdrasilMinecraftSessionService)MinecraftClient.getInstance().getSessionService()).getAuthenticationService().getProxy();
+        this.pair = PlayerKeyPair.fetchKeyPair(readInputStream(postInternal(ClientAuth.constantURL(), new byte[0],accessToken,proxy)));
         this.uuid = MinecraftClient.getInstance().getSession().getProfile().getId();
-        this.proxy = ((YggdrasilMinecraftSessionService)MinecraftClient.getInstance().getSessionService()).getAuthenticationService().getProxy();
-        this.pair = PlayerKeyPair.fetchKeyPair(readInputStream(postInternal(ClientAuth.constantURL(), new byte[0])));
     }
-
-    public static ClientAuth createClientAuth() {
+    public static Optional<ClientAuth> createClientAuth() {
         try {
-            return new ClientAuth();
+            return executeWithLock(ClientAuth::new, LOCK_TIMEOUT);
         } catch (Exception e) {
-            ServerSideRNG.log(Level.WARN,"Failed to create Authentication: ");
+            log(Level.WARN,"Failed to create Authentication: ");
             e.printStackTrace();
-            return null;
+            return Optional.empty();
         }
     }
     /**
@@ -89,7 +117,7 @@ public class ClientAuth {
             output.addProperty("data",Base64.getEncoder().encodeToString(data));
             return output;
         } catch (Exception e) {
-            ServerSideRNG.log(Level.WARN,"Failed to sign authentication message JSON: ");
+            log(Level.WARN,"Failed to sign authentication message JSON: ");
             e.printStackTrace();
             return null;
         }
@@ -141,8 +169,8 @@ public class ClientAuth {
         }
     }
 
-    HttpURLConnection postInternal(final URL url, final byte[] postAsBytes) throws IOException {
-        final HttpURLConnection connection = (HttpURLConnection) url.openConnection(this.proxy);
+    HttpURLConnection postInternal(final URL url, final byte[] postAsBytes,String accessToken,Proxy proxy) throws IOException {
+        final HttpURLConnection connection = (HttpURLConnection) url.openConnection(proxy);
         connection.setConnectTimeout(5000);
         connection.setReadTimeout(5000);
         connection.setUseCaches(false);
@@ -150,7 +178,7 @@ public class ClientAuth {
         try {
             connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
             connection.setRequestProperty("Content-Length", "" + postAsBytes.length);
-            connection.setRequestProperty("Authorization", "Bearer " + this.accessToken);
+            connection.setRequestProperty("Authorization", "Bearer " + accessToken);
             connection.setRequestMethod("POST");
             connection.setDoOutput(true);
             outputStream = connection.getOutputStream();

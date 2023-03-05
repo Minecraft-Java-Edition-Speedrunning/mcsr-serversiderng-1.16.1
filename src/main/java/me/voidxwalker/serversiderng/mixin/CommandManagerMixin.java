@@ -19,7 +19,7 @@ public class CommandManagerMixin {
      * @author Void_X_Walker
      */
     @Inject(method = "<init>",at = @At("TAIL"))
-    private void registerUploadRunCommand(CommandManager.RegistrationEnvironment environment, CallbackInfo ci){
+    private void serversiderng_registerUploadRunCommand(CommandManager.RegistrationEnvironment environment, CallbackInfo ci){
         ServerSideRNG.register(this.dispatcher);
     }
 }
