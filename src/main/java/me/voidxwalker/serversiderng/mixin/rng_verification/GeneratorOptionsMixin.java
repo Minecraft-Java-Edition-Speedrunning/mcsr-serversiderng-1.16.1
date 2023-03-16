@@ -37,7 +37,8 @@ public class GeneratorOptionsMixin {
                 long l = it.nextLong();
                 this.seed = l;
                 return l;
-            }).orElse(other);
+            })
+            .orElse(other);
     }
 
     /**
