@@ -19,7 +19,10 @@ public class RNGInitializer {
     private static boolean pauseUpdates;
     private int sessionIndex;
     public RNGInitializer(JsonObject jsonObject) throws Throwable {
-        this(Optional.ofNullable(jsonObject.get("random")).orElseThrow((Supplier<Throwable>)() -> new IllegalArgumentException("Invalid JsonObject!")).getAsLong(),Optional.ofNullable(jsonObject.get("runId")).orElseThrow((Supplier<Throwable>)() -> new IllegalArgumentException("Invalid JsonObject!")).getAsLong());
+        this(
+            jsonObject.getAsJsonPrimitive​("random").getAsLong(),
+            jsonObject.getAsJsonPrimitive​("runId").getAsLong()
+        );
     }
     public RNGInitializer(long seed,long runId){
         initializer=new Random(seed);
