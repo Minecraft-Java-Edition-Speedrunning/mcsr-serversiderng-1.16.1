@@ -20,9 +20,9 @@ public class GeneratorOptionsMixin {
     @Inject(method = "withHardcore",at = @At("HEAD"))
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     public void serversiderng_startRun(boolean hardcore, OptionalLong seed, CallbackInfoReturnable<GeneratorOptions> cir) {
-        if(ServerSideRNG.getRNGInitializer().filter(rngInitializer -> !rngInitializer.outOfTime()).isEmpty()){
-            RNGInitializer.update();
-        }
+        ServerSideRNG.getRNGInitializer()
+            .filter(rngInitializer -> !rngInitializer.outOfTime())
+            .ifPresent((initializer) -> RNGInitializer.update())
         ServerSideRNG.getRNGInitializer().ifPresent(RNGInitializer::startRNGSession);
     }
 }
