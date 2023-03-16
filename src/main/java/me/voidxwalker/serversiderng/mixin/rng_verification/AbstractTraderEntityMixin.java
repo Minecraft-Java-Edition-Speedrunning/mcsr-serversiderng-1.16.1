@@ -24,7 +24,8 @@ public class AbstractTraderEntityMixin {
         return ServerSideRNG.getRngContext(RNGHandler.RNGTypes.VILLAGER_SELECT_OFFER,profession)
                 .map(Supplier::get)
                 .map((it)-> new Random(it))
-                .orElse(random).nextInt(i);
+                .orElse(random)
+                .nextInt(i);
     }
     @SuppressWarnings("all")
     @ModifyArg(
