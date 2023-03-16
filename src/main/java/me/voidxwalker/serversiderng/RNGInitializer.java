@@ -72,15 +72,9 @@ public class RNGInitializer {
     }
     public static Optional<RNGInitializer> createRNGInitializer(){
         try {
-            return Optional.of(
-                    new RNGInitializer(
-                            IOUtils.getStartRunToken(
-                                    ClientAuth.getInstance().orElseThrow(
-                                            (Supplier<Throwable>) () -> new IllegalStateException("Failed to retrieve ClientAuth")
-                                    )
-                            )
-                    )
-            );
+            return ClientAuth.getInstance()
+                .map((auth) -> new RNGInitializer(IOUtils.getStartRunToken(auth)))
+                .orElseThrow((Supplier<Throwable>) () -> new IllegalStateException("Failed to retrieve ClientAuth"));
         }  catch (ConnectException e){
             ServerSideRNG.log(Level.WARN,"Failed to create new RNGInitializer: Could not connect to the Server.");
             return Optional.empty();
