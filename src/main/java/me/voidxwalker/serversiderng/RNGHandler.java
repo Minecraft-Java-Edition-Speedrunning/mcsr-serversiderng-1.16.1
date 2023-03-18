@@ -54,7 +54,17 @@ public class RNGHandler {
      */
     public static Optional<RNGHandler> createRNGHandler(long runId) {
         try {
-            return Optional.of(new RNGHandler(new Random(IOUtils.getGetRandomToken(runId, ClientAuth.getInstance().orElseThrow((Supplier<Throwable>) () -> new IllegalStateException("Failed to retrieve ClientAuth"))).get("random").getAsLong()).nextLong()));
+            return Optional.of(
+                    new RNGHandler(
+                            new Random(
+                                    IOUtils.getGetRandomToken(
+                                            runId, ClientAuth.getInstance().orElseThrow(
+                                                    (Supplier<Throwable>) () -> new IllegalStateException("Failed to retrieve ClientAuth")
+                                            )
+                                    ).get("random").getAsLong()
+                            ).nextLong()
+                    )
+            );
         }
         catch (UnknownHostException | ConnectException e){
             ServerSideRNG.log(Level.WARN,"Failed to create new RNGHandler: Could not connect to the Server.");
