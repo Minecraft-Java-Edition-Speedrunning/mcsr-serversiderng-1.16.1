@@ -21,8 +21,8 @@ public class GeneratorOptionsMixin {
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     public void serversiderng_startRun(boolean hardcore, OptionalLong seed, CallbackInfoReturnable<GeneratorOptions> cir) {
         ServerSideRNG.getRNGInitializer()
-                .filter(rngInitializer -> !rngInitializer.outOfTime())
-                .ifPresent((initializer) -> RNGInitializer.update());
+            .filter(rngInitializer -> !rngInitializer.outOfTime())
+            .ifPresent((initializer) -> RNGInitializer.update())
         ServerSideRNG.getRNGInitializer().ifPresent(RNGInitializer::startRNGSession);
     }
 }

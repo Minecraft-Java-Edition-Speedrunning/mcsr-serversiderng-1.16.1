@@ -23,6 +23,7 @@ public class PlayerEntityMixin {
         return ServerSideRNG.getRngContext(RNGHandler.RNGTypes.ENCHANTMENT)
                 .map(Supplier::get)
                 .map(Random::new)
-                .orElse(random).nextInt();
+                .orElse(random)
+                .nextInt();
     }
 }
