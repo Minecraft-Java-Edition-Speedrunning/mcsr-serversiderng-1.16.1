@@ -18,10 +18,10 @@ public class RNGInitializer {
     private final Random initializer;
     private static boolean pauseUpdates;
     private int sessionIndex;
-    public RNGInitializer(JsonObject jsonObject) throws Throwable {
+    public RNGInitializer(JsonObject jsonObject) {
         this(
-            jsonObject.getAsJsonPrimitive​("random").getAsLong(),
-            jsonObject.getAsJsonPrimitive​("runId").getAsLong()
+            jsonObject.getAsJsonPrimitive("random").getAsLong(),
+            jsonObject.getAsJsonPrimitive("runId").getAsLong()
         );
     }
     public RNGInitializer(long seed,long runId){
@@ -75,9 +75,15 @@ public class RNGInitializer {
     }
     public static Optional<RNGInitializer> createRNGInitializer(){
         try {
-            return ClientAuth.getInstance()
-                .map((auth) -> new RNGInitializer(IOUtils.getStartRunToken(auth)))
-                .orElseThrow((Supplier<Throwable>) () -> new IllegalStateException("Failed to retrieve ClientAuth"));
+            return Optional.of(
+                    new RNGInitializer(
+                            IOUtils.getStartRunToken(
+                                    ClientAuth.getInstance().orElseThrow(
+                                            (Supplier<Throwable>) () -> new IllegalStateException("Failed to retrieve ClientAuth")
+                                    )
+                            )
+                    )
+            );
         }  catch (ConnectException e){
             ServerSideRNG.log(Level.WARN,"Failed to create new RNGInitializer: Could not connect to the Server.");
             return Optional.empty();
