@@ -22,7 +22,7 @@ public class MinecraftServerMixin {
      */
     @Inject(method = "tick",at = @At("HEAD"))
     public void serversiderng_upload(BooleanSupplier shouldKeepTicking, CallbackInfo ci){
-        RNGSession.getInstance().filter(rngSession -> ServerSideRNG.needsUpload()).ifPresent(rngSession -> IOUtils.uploadHash(rngSession.runId));
+        RNGSession.getInstance().filter(rngSession -> ServerSideRNG.needsUpload()).ifPresentOrElse(rngSession -> IOUtils.uploadHash(rngSession.runId),()->{});
     }
     @Inject(method = "<init>",at = @At("TAIL"))
     public void serversiderng_worldGenerationStart(CallbackInfo ci){

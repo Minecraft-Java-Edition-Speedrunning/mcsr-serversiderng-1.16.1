@@ -89,9 +89,10 @@ public class RNGHandler {
      * Activates the {@link RNGHandler} by setting the {@link RNGHandler#startTime} to the current {@code System Time}
      * @author Void_X_Walker
      */
-    public void activate(int handlerIndex) {
+    public RNGHandler activate(int handlerIndex) {
         startTime = System.nanoTime();
         this.handlerIndex=handlerIndex;
+        return this;
     }
     /**
      * Returns whether the {@link RNGHandler} has passed its standard {@link ServerSideRNGConfig#HANDLER_USE_TIME}

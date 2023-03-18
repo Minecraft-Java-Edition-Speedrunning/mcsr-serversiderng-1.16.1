@@ -61,8 +61,9 @@ public class RNGSession {
     private Optional<RNGHandler> getCurrentRNGHandler(){
         return Optional.ofNullable(currentRNGHandler);
     }
-    private void setCurrentRNGHandler(RNGHandler handler){
+    private RNGHandler setCurrentRNGHandler(RNGHandler handler){
         currentRNGHandler=handler;
+        return currentRNGHandler;
     }
     public Optional< CompletableFuture<Optional<RNGHandler>>> getRngHandlerCompletableFuture(){
         return Optional.ofNullable(rngHandlerCompletableFuture);
@@ -94,9 +95,7 @@ public class RNGSession {
         getCurrentRNGHandler().ifPresentOrElse(
                 rngHandler -> {
                     if(rngHandler.outOfNormalTime()){
-                        getRngHandlerCompletableFuture().ifPresentOrElse(ignored -> {}, ()->{
-                            setRngHandlerCompletableFuture( CompletableFuture.supplyAsync(()-> RNGHandler.createRNGHandler(runId)));
-                        });
+                        getRngHandlerCompletableFuture().ifPresentOrElse(ignored -> {}, ()-> setRngHandlerCompletableFuture( CompletableFuture.supplyAsync(()-> RNGHandler.createRNGHandler(runId))));
                         if(getRngHandlerCompletableFuture().map(rngHandlerCompletableFuture1 -> rngHandlerCompletableFuture1.isDone()||rngHandler.outOfExtraTime()).orElse(false)){
                             rngHandler.log(Level.INFO,"Current RNGHandler ran out of time, updating it!");
                             getRngHandlerFromFuture();
@@ -156,22 +155,13 @@ public class RNGSession {
             obtainedRNGHandler=Optional.empty();
         }
         try {
-            if(obtainedRNGHandler.isPresent()){
-                setCurrentRNGHandler(obtainedRNGHandler.get());
-            }
-            else {
-                setCurrentRNGHandler(
-                        getBackupRandom()
-                                .map(random -> {
-                                    RNGHandler handler = new RNGHandler(random.nextLong());
-                                    handler.log(Level.WARN, "Using RNGHandler created by the backup Random!");
-                                    return handler;
-                                }).orElseThrow(IllegalStateException::new));
-            }
-            getCurrentRNGHandler().ifPresent(rngHandler -> {
-                rngHandler.activate(handlerIndex++);
-                rngHandler.log(Level.INFO,"Successfully updated the current RNGHandler!");
-            });
+            setCurrentRNGHandler(obtainedRNGHandler.orElseGet(() -> getBackupRandom()
+                    .map(random -> {
+                        RNGHandler handler = new RNGHandler(random.nextLong());
+                        handler.log(Level.WARN, "Using RNGHandler created by the backup Random!");
+                        return handler;
+                    }).orElseThrow(IllegalStateException::new))
+            ).activate(handlerIndex++).log(Level.INFO,"Successfully updated the current RNGHandler!");
         } catch (IllegalStateException e) {
             log(Level.WARN, "Failed to update the current RNGHandler from backup Random!");
         }
