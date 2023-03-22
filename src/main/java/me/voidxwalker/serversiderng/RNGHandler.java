@@ -1,5 +1,6 @@
 package me.voidxwalker.serversiderng;
 
+import me.voidxwalker.serversiderng.auth.ClientAuth;
 import net.minecraft.block.Block;
 import net.minecraft.entity.EntityType;
 import net.minecraft.util.registry.DefaultedRegistry;
@@ -13,7 +14,9 @@ import java.net.ConnectException;
 import java.net.UnknownHostException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
+import java.util.function.Supplier;
 
 public class RNGHandler {
     private final Map<RNGTypes, RNGSupplier> randomMap;
@@ -38,7 +41,7 @@ public class RNGHandler {
         }
     }
     public void log(Level level,String message){
-        RNGSession.getInstance().log(level,"("+this.handlerIndex+")"+message);
+        RNGSession.getInstance().ifPresent(rngSession ->  rngSession.log(level,"("+this.handlerIndex+")"+message));
     }
     /**
      * Creates a new {@link RNGHandler} using the provided {@code runId} and the {@code GetRandom} token obtained from the {@code Verification-Server}.
@@ -46,21 +49,31 @@ public class RNGHandler {
      * @param runId the {@code Long} {@code runId} of the session the newly created {@link RNGHandler} should belong to.
      * @return a new {@link RNGHandler} or {@code null} if an {@link IOException} occurred when making the request
      * @see  RNGHandler#RNGHandler(long)
-     * @see ServerSideRNG#getGetRandomToken(long)
+     * @see IOUtils#getGetRandomToken(long,ClientAuth)
      * @author Void_X_Walker
      */
-    public static RNGHandler createRNGHandlerOrNull(long runId) {
+    public static Optional<RNGHandler> createRNGHandler(long runId) {
         try {
-            return new RNGHandler(new Random(ServerSideRNG.getGetRandomToken(runId).get("random").getAsLong()).nextLong());
+            return Optional.of(
+                    new RNGHandler(
+                            new Random(
+                                    IOUtils.getGetRandomToken(
+                                            runId, ClientAuth.getInstance().orElseThrow(
+                                                    (Supplier<Throwable>) () -> new IllegalStateException("Failed to retrieve ClientAuth")
+                                            )
+                                    ).get("random").getAsLong()
+                            ).nextLong()
+                    )
+            );
         }
         catch (UnknownHostException | ConnectException e){
             ServerSideRNG.log(Level.WARN,"Failed to create new RNGHandler: Could not connect to the Server.");
-            return null;
+            return Optional.empty();
         }
-        catch (IOException | NullPointerException e) {
+        catch (Throwable e) {
             ServerSideRNG.log(Level.WARN,"Failed to create new RNGHandler: ");
             e.printStackTrace();
-            return null;
+            return Optional.empty();
         }
     }
 
@@ -86,25 +99,26 @@ public class RNGHandler {
      * Activates the {@link RNGHandler} by setting the {@link RNGHandler#startTime} to the current {@code System Time}
      * @author Void_X_Walker
      */
-    public void activate(int handlerIndex) {
+    public RNGHandler activate(int handlerIndex) {
         startTime = System.nanoTime();
         this.handlerIndex=handlerIndex;
+        return this;
     }
     /**
-     * Returns whether the {@link RNGHandler} has passed its standard {@link ServerSideRNGConfig#USE_TIME}
-     * @return {@code true} if the current {@link System#nanoTime()} minus the {@link RNGHandler#startTime} is bigger than the {@link ServerSideRNGConfig#USE_TIME}
+     * Returns whether the {@link RNGHandler} has passed its standard {@link ServerSideRNGConfig#HANDLER_USE_TIME}
+     * @return {@code true} if the current {@link System#nanoTime()} minus the {@link RNGHandler#startTime} is bigger than the {@link ServerSideRNGConfig#HANDLER_USE_TIME}
      * @author Void_X_Walker
      */
     public boolean outOfNormalTime() {
-        return System.nanoTime() - startTime > ServerSideRNGConfig.USE_TIME;
+        return System.nanoTime() - startTime > ServerSideRNGConfig.HANDLER_USE_TIME;
     }
     /**
-     * Returns whether the {@link RNGHandler} has passed its {@link ServerSideRNGConfig#EXTRA_TIME}
-     * @return {@code true} if the current {@link System#nanoTime()} minus the {@link RNGHandler#startTime} is bigger than the {@link ServerSideRNGConfig#USE_TIME} + the {@link ServerSideRNGConfig#EXTRA_TIME}
+     * Returns whether the {@link RNGHandler} has passed its {@link ServerSideRNGConfig#HANDLER_EXTRA_TIME}
+     * @return {@code true} if the current {@link System#nanoTime()} minus the {@link RNGHandler#startTime} is bigger than the {@link ServerSideRNGConfig#HANDLER_USE_TIME} + the {@link ServerSideRNGConfig#HANDLER_EXTRA_TIME}
      * @author Void_X_Walker
      */
     public boolean outOfExtraTime() {
-        return System.nanoTime() - startTime < ServerSideRNGConfig.USE_TIME + ServerSideRNGConfig.EXTRA_TIME;
+        return System.nanoTime() - startTime > ServerSideRNGConfig.HANDLER_USE_TIME + ServerSideRNGConfig.HANDLER_EXTRA_TIME;
     }
     /**
      * The Random Generators that get replaced with Generators on the {@code Verification-Server}

@@ -1,45 +1,73 @@
 package me.voidxwalker.serversiderng;
 
-import com.google.gson.JsonObject;
 import com.mojang.brigadier.CommandDispatcher;
 import me.voidxwalker.serversiderng.auth.ClientAuth;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.LiteralText;
-import net.minecraft.util.FileNameUtil;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.WorldSavePath;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Optional;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public class ServerSideRNG implements ClientModInitializer {
-    final static String HASH_ALG = "MD5";
     final static File verificationFolder = new File("verification-zips");
 
     private static final Logger LOGGER = LogManager.getLogger("ServerSideRNG");
+
+    private static LastSession lastSession;
+
     static AtomicBoolean impendingUpload= new AtomicBoolean(false);
+    private static CompletableFuture<Optional<RNGInitializer>> rngInitializerCompletableFuture;
+    private static RNGInitializer currentInitializer;
+
     public static boolean needsUpload(){
         return impendingUpload.getAndSet(false);
     }
-    public static LastSession lastSession;
+    public static Optional<LastSession> getLastSession(){
+        return Optional.ofNullable(lastSession);
+    }
+    public static void setLastSession(LastSession session){
+        lastSession=session;
+    }
+    protected static void setCurrentInitializer(RNGInitializer initializer){
+        currentInitializer=initializer;
+    }
+    protected static Optional<CompletableFuture<Optional<RNGInitializer>>> getRngInitializerCompletableFuture(){
+        return Optional.ofNullable(rngInitializerCompletableFuture);
+    }
+    protected static void setRngInitializerCompletableFuture(CompletableFuture<Optional<RNGInitializer>> future){
+        rngInitializerCompletableFuture=future;
+    }
 
+    public static Optional<Supplier<Long>> getRngContext(RNGHandler.RNGTypes type, @Nullable String subType) {
+        return getRNGInitializer().flatMap(RNGInitializer::getInstance)
+            .flatMap(RNGSession::getAndUpdateCurrentRNGHandler)
+            .map((it) ->()-> it.getRngValue(type,subType));
+    }
+    public static Optional<RNGInitializer> getRNGInitializer(){
+        return Optional.ofNullable(currentInitializer);
+    }
+
+    public static Optional<Supplier<Long>> getRngContext(RNGHandler.RNGTypes type) {
+        return getRngContext(type,null);
+    }
     /**
      * Adds an event to the {@code onComplete} listener of <a href="https://github.com/RedLime/SpeedRunIGT">SpeedRunIGT</a> that fires at run completion.
      * It will save the world and upload its Hash after a delay of one second.
-     * @see ServerSideRNG#getAndUploadHash(File,long)  )
+     * @see IOUtils#getAndUploadHash(File, long)  )
      * @author Void_X_Walker
      */
     @Override
@@ -52,7 +80,7 @@ public class ServerSideRNG implements ClientModInitializer {
                         .invoke(null,(Consumer<Object>) o -> new Timer().schedule(new TimerTask() {
                             @Override
                             public void run() {
-                                if(RNGSession.inSession()){
+                                if( RNGSession.inSession()){
                                    impendingUpload.set(true);
                                 }
                             }
@@ -63,134 +91,29 @@ public class ServerSideRNG implements ClientModInitializer {
             e.printStackTrace();
         }
         CompletableFuture.runAsync(IOUtils::prepareVerificationFolder);
-        ClientAuth.clientAuthCompletableFuture = CompletableFuture.supplyAsync(ClientAuth::createClientAuth);
-        RNGSession.rngSessionCompletableFuture = CompletableFuture.supplyAsync(RNGSession::createRNGSessionOrNull);
+        ClientAuth.setClientAuthCompletableFuture( CompletableFuture.supplyAsync(()->{
+            Optional<ClientAuth> auth = ClientAuth.createClientAuth();
+            ServerSideRNG.setRngInitializerCompletableFuture( CompletableFuture.supplyAsync(RNGInitializer::createRNGInitializer));
+            return auth;
+        } ));
+
     }
     public static void log(Level level,String message){
         LOGGER.log(level,message);
     }
     /**
-     * Registers the command {@code serversiderng_uploadRun} that will save the world and upload it's hash via the {@link ServerSideRNG#getAndUploadHash(File,long)} method.
+     * Registers the command {@code serversiderng_uploadRun} that will save the world and upload it's hash via the {@link IOUtils#getAndUploadHash(File, long)} method.
      * @param dispatcher the {@link CommandDispatcher} to add the command to
-     * @see ServerSideRNG#getAndUploadHash(File,long)  )
+     * @see IOUtils#getAndUploadHash(File, long)  )
      * @author Void_X_Walker
      */
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         dispatcher.register( CommandManager.literal("serversiderng_uploadRun").executes(context -> {
-            if(RNGSession.inSession()){
-                uploadHash(RNGSession.getInstance().runId);
-            }
+            RNGSession.getInstance().ifPresent(rngInitializer -> IOUtils.uploadHash(rngInitializer.runId));
             return 1;
         }));
     }
-    /**
-     * Packs the current world folder and the latest.log file into a {@code ZIP} file named "verification-[worldFileName].zip" in the {@link ServerSideRNG#verificationFolder} using  {@link IOUtils#packZipFile(String, String, String)}
-     * It then converts the {@code ZIP-File} into a {@code Hash} using {@link IOUtils#zipToHash(File)}
-     * and sends it to the {@code Verification-Server} using  {@link ServerSideRNG#uploadHashToken(long, String)}
-     * This method should be called asynchronously via {@link ServerSideRNG#uploadHash( long)} if possible.
-     * @param worldFile the file of the world to zip and upload the hash of
-     * @see  IOUtils#zipToHash(File)
-     * @see IOUtils#packZipFile(String, String, String)
-     * @see ServerSideRNG#uploadHashToken(long, String) )
-     * @author Void_X_Walker
-     */
-    public static void getAndUploadHash(File worldFile,long runId) {
-        try {
-            File logsFile = new File(MinecraftClient.getInstance().runDirectory,"logs/latest.log");
-            File zipFile =  new File(
-                ServerSideRNG.verificationFolder,FileNameUtil.getNextUniqueName(ServerSideRNG.verificationFolder.toPath(),"verification-" + worldFile.getName(),".zip")
-            );
-            IOUtils.packZipFile(zipFile.getPath(), worldFile.getPath(), logsFile.getPath());
-            String hash = IOUtils.zipToHash(zipFile);
-            ServerSideRNG.uploadHashToken(runId, hash);
-            ServerSideRNG.log(Level.INFO, "Successfully uploaded File Hash!");
-        } catch (Exception e) {
-            ServerSideRNG.log(Level.WARN, "Failed to uploaded File Hash: ");
-            e.printStackTrace();
-        }
-    }
-    public static void uploadHash(long runId){
-        if( MinecraftClient.getInstance().getServer()!=null) {
-            MinecraftClient.getInstance().getServer().getPlayerManager().saveAllPlayerData();
-            MinecraftClient.getInstance().getServer().save(true, false, false);
-            MinecraftClient
-                    .getInstance()
-                    .getServer()
-                    .getCommandSource()
-                    .sendFeedback(new LiteralText("Successfully uploaded the Run!")
-                            .styled(style -> style.withColor(Formatting.GREEN)
-                            ), false);
-            CompletableFuture.runAsync(() -> {
-                ServerSideRNG.getAndUploadHash(MinecraftClient
-                        .getInstance()
-                        .getServer()
-                        .getSavePath(WorldSavePath.ROOT)
-                        .toFile()
-                        .getParentFile(), runId);
-                if (MinecraftClient.getInstance().player != null) {
-                    MinecraftClient.getInstance().player.getCommandSource().sendFeedback(new LiteralText("Successfully uploaded the Run!")
-                                    .styled(style -> style.withColor(Formatting.GREEN)
-                                    ), false);
-                }
-            });
-        }
-    }
-    /**
-     * Sends a {@code startRunRequest} to the {@code Verification-Server} via the {@link ServerSideRNGConfig#START_RUN_URL},
-     * and returns a {@link JsonObject} containing the {@code runId} of the session and the {@code random}.
-     * Automatically grabs the {@code UUID} of the current {@link com.mojang.authlib.GameProfile} for the upload.
-     * This method should be called asynchronous due to the delay associated with the request.
-     * @return a {@link JsonObject} with the  {@code runId} as the {@code Long} value for the {@code "runId"} property
-     * and the {@code random} as the {@code Long} value for the {@code "random"} property
-     * @throws IOException: If an error occurred when making the request
-     * @see  IOUtils#makeRequest(JsonObject, String)
-     * @see ServerSideRNGConfig#START_RUN_URL
-     * @author Void_X_Walker
-     */
-    static JsonObject getStartRunToken() throws IOException {
-        JsonObject json = new JsonObject();
-        json.add("auth", ClientAuth.getInstance().createMessageJson());
-        json.addProperty("uuid", ClientAuth.getInstance().uuid.toString());
-        return IOUtils.makeRequest(json, ServerSideRNGConfig.START_RUN_URL);
-    }
-    /**
-     * Sends a {@code getRandomRequest} with the {@code runId} to the {@code Verification-Server} via the {@link ServerSideRNGConfig#GET_RANDOM_URL},
-     * and returns a {@link JsonObject} containing the {@code random}.
-     * Automatically grabs the {@code UUID} of the current {@link com.mojang.authlib.GameProfile} for the upload.
-     * This method should be called asynchronous due to the delay associated with the request.
-     * @param runId the {@code Long} {@code runId} for the {@link RNGSession} associated with the request.
-     * @return a {@link JsonObject} with the {@code random} as the {@code Long} value for the {@code "random"} property
-     * @throws IOException: If an error occurred when making the request
-     * @see  IOUtils#makeRequest(JsonObject, String)
-     * @see ServerSideRNGConfig#GET_RANDOM_URL
-     * @author Void_X_Walker
-     */
-    static JsonObject getGetRandomToken(long runId) throws IOException {
-        JsonObject json = new JsonObject();
-        json.add("auth", ClientAuth.getInstance().createMessageJson());
-        json.addProperty("uuid", ClientAuth.getInstance().uuid.toString());
-        json.addProperty("runId", runId);
-        return IOUtils.makeRequest(json, ServerSideRNGConfig.GET_RANDOM_URL);
-    }
-    /**
-     * Uploads a {@code Hash} together with the {@code runId} to the {@code Verification-Server} via the {@link ServerSideRNGConfig#UPLOAD_HASH_URL}.
-     * Automatically grabs the {@code UUID} of the current {@link com.mojang.authlib.GameProfile} for the upload.
-     * This method should be called asynchronous due to the delay associated with the request.
-     * @param runId the {@code Long} {@code runId} for the {@link RNGSession} associated with the {code Hash}.
-     * @param hash the {@code Hash} that should be uploaded to the {@code Verification-Server}
-     * @throws IOException: If an error occurred when making the request
-     * @see  IOUtils#makeRequest(JsonObject, String)
-     * @see ServerSideRNGConfig#UPLOAD_HASH_URL
-     * @author Void_X_Walker
-     */
-    static void uploadHashToken(long runId, String hash) throws IOException {
-        JsonObject json = new JsonObject();
-        json.add("auth", ClientAuth.getInstance().createMessageJson());
-        json.addProperty("uuid", ClientAuth.getInstance().uuid.toString());
-        json.addProperty("hash", hash);
-        json.addProperty("runId", runId);
-        IOUtils.makeRequest(json, ServerSideRNGConfig.UPLOAD_HASH_URL);
-    }
+
     public static class LastSession{
         public  File lastWorldFile;
         public long lastRunId;

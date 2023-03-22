@@ -1,7 +1,7 @@
 package me.voidxwalker.serversiderng.mixin.rng_verification;
 
 import me.voidxwalker.serversiderng.RNGHandler;
-import me.voidxwalker.serversiderng.RNGSession;
+import me.voidxwalker.serversiderng.ServerSideRNG;
 import net.minecraft.entity.passive.AbstractTraderEntity;
 import net.minecraft.entity.passive.VillagerEntity;
 import org.spongepowered.asm.mixin.Mixin;
@@ -16,15 +16,16 @@ import java.util.function.Supplier;
 public class AbstractTraderEntityMixin {
     @SuppressWarnings("all")
     @Redirect(method = "fillRecipesFromPool",at = @At(value = "INVOKE",target = "Ljava/util/Random;nextInt(I)I"))
-    public int modifySelectOfferRandom(Random random, int i){
+    public int serversiderng_modifySelectOfferRandom(Random random, int i){
         String profession=null;
         if((AbstractTraderEntity)(Object)this instanceof VillagerEntity) {
             profession=((VillagerEntity) (Object) this).getVillagerData().getProfession().toString();
         }
-        return RNGSession.getRngContext(RNGHandler.RNGTypes.VILLAGER_SELECT_OFFER,profession)
+        return ServerSideRNG.getRngContext(RNGHandler.RNGTypes.VILLAGER_SELECT_OFFER,profession)
                 .map(Supplier::get)
-                .map((it)-> new Random(it).nextInt(i))
-                .orElse(random.nextInt(i));
+                .map((it)-> new Random(it))
+                .orElse(random)
+                .nextInt(i);
     }
     @SuppressWarnings("all")
     @ModifyArg(
@@ -32,12 +33,12 @@ public class AbstractTraderEntityMixin {
             at = @At(value = "INVOKE", target = "Lnet/minecraft/village/TradeOffers$Factory;create(Lnet/minecraft/entity/Entity;Ljava/util/Random;)Lnet/minecraft/village/TradeOffer;"),
             index = 1
     )
-    public Random modifyOfferRandom(Random random){
+    public Random serversiderng_modifyOfferRandom(Random random){
         String profession=null;
         if((AbstractTraderEntity)(Object)this instanceof VillagerEntity) {
             profession=((VillagerEntity) (Object) this).getVillagerData().getProfession().toString();
         }
-        return RNGSession.getRngContext(RNGHandler.RNGTypes.VILLAGER_OFFER,profession)
+        return ServerSideRNG.getRngContext(RNGHandler.RNGTypes.VILLAGER_OFFER,profession)
                 .map(Supplier::get)
                 .map(Random::new)
                 .orElse(random);
