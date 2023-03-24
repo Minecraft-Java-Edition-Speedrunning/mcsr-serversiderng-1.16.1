@@ -12,9 +12,9 @@ public class ServerSideRNGConfig {
     public final static long TIME_OUT_OF_WORLD_BEFORE_AUTOUPLOAD=10000000000L; //10 seconds
     public final static long TIME_OUT_OF_WORLD_BEFORE_PAUSE=60000000000L; //60 seconds
     final static String BASE_URL = "https://serverside-rng-website-fputsekrmq-uc.a.run.app";
-    final static String UPLOAD_HASH_URL = BASE_URL + "/uploadHashDev";
-    final static String GET_RANDOM_URL = BASE_URL + "/getRandomDev";
-    final static String START_RUN_URL = BASE_URL + "/startRunDev";
+    final static String UPLOAD_HASH_URL = BASE_URL + "/uploadHash";
+    final static String GET_RANDOM_URL = BASE_URL + "/getRandom";
+    final static String START_RUN_URL = BASE_URL + "/startRun";
     final static String READ_ME_NAME = "readme.txt";
     final static String READ_ME = "Submit the Verification Zip File with the name the world you played your run in alongside your speedrun.com submission.\nMake sure not to alter the ZIP in any way, as that may lead your run becoming unverifiable.\nFor more information read this: https://github.com/VoidXWalker/serverSideRNG/blob/master/README.md.\nIf you have any problems or unanswered questions feel free to open a help thread in the Minecraft Java Edition Speedrunning Discord: https://discord.com/invite/jmdFn3C.";
     final static long HANDLER_USE_TIME = 40000000000L; //40 seconds
