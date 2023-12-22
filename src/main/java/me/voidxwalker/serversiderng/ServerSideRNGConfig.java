@@ -21,8 +21,8 @@ public class ServerSideRNGConfig {
     final static long HANDLER_EXTRA_TIME = 10000000000L; //10 seconds
     final static long INITIALIZER_USE_TIME=30000000000L;
 
-    final static long GRACE_PERIOD=3000000000L; // 3 seconds
-    final static String VERIFICATION_FOLDER_HASH_ALG = "MD5";
+    final static long GRACE_PERIOD=2000000000L; // 2 seconds
+    final static String VERIFICATION_FOLDER_HASH_ALG = "SHA-256";
     static final long INITIALIZR_UPDATE_COOLDOWN_TIME =10000000000L;
     public static boolean UPLOAD_ON_SEED=true;
     public static boolean UPLOAD_ON_SHUTDOWN=true;
